@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #DBDED9;
+  --color-darker-bg: #60846A;
+  --color-header-bg: #2D4A43;
+  --color-chat-bg: #9AAB94;
+  --color-light-green: #D8DAD6;
+  --color-light-text: #F5F5F5;
+  --color-dark-text: #112820;
+
+  --font-regular: "Poppins", sans-serif;
+  --font-calligraphic: "Meddon", cursive;
+
+  --bg-btn-dark: linear-gradient(90deg, #152C28 5.29%, #315048 100%);
+  --bg-btn-light: linear-gradient(90deg, #B5C1A9 0%, #65816A 100%);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-dark-text);
+    font-family: var(--font-regular);
+    font-size: 20px;
+  }
+}
+
+@layer components {
+    .btn-dark {
+      background: var(--bg-btn-dark);
+      background-size: 200% auto;
+      transition: background-position 0.5s ease;
+    }
+  
+    .btn-dark:hover {
+      background-position: right center;
+    }
+  
+    .btn-light {
+      background: var(--bg-btn-light);
+      background-size: 200% auto;
+      transition: background-position 0.5s ease;
+    }
+  
+    .btn-light:hover {
+      background-position: right center;
+    }
+  }
+  
+
+  
+  
+
+  
