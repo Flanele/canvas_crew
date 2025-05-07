@@ -1,11 +1,17 @@
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
+const clearChatHistory = require('./services/clearChatHistory');
+
 const { Server } = require("socket.io");
 
 const PORT = process.env.PORT || 3020;
 
 const server = express();
+
+clearChatHistory();
 
 // --- CORS ---
 const corsOptions = {
@@ -64,7 +70,7 @@ io.on("connection", (socket) => {
           room.active = false;
           console.log(`😴 Room ${roomId} is now inactive`);
           io.emit("update-rooms", getVisibleRooms());
-        }, 60_000); // 1 minute
+        }, 1200_000); // 20 minutes
       }
     }
   });
@@ -87,10 +93,39 @@ io.on("connection", (socket) => {
   });
 
   socket.on("message", ({ roomId, id, text, username, time }) => {
-    if (roomId) {
-      console.log(`✉️  User ${username} sent '${text}' in room ${roomId}`);
-      io.to(roomId).emit("message", { id, text, username, time });
+    if (!roomId) {
+      return;
     }
+
+    const message = { id, text, username, time };
+
+    const chatDir = path.join(__dirname, "temp", "chats");
+    const filePath = path.join(chatDir, `${roomId}.json`);
+
+    fs.mkdirSync(chatDir, { recursive: true });
+
+    let history = [];
+
+    if (fs.existsSync(filePath)) {
+      try {
+        const raw = fs.readFileSync(filePath, "utf-8");
+        history = JSON.parse(raw);
+      } catch (err) {
+        console.error("❌ Error reading chat file:", err);
+      }
+    }
+  
+    history.push(message);
+  
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(history, null, 2), "utf-8");
+      console.log(`💾 Saved message to ${filePath}`);
+    } catch (err) {
+      console.error("❌ Error saving chat:", err);
+    }  
+
+    console.log(`✉️  User ${username} sent '${text}' in room ${roomId}`);
+    io.to(roomId).emit("message", { id, text, username, time });
   });
 });
 

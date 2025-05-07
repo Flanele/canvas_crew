@@ -1,5 +1,4 @@
 import React from "react";
-import { Container } from "./Container";
 import { useUserStore } from "../store/user";
 import socket from "../socket/socket";
 import { nanoid } from "nanoid";
@@ -19,6 +18,7 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [input, setInput] = React.useState("");
   const username = useUserStore((state) => state.username);
+  const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     const handleMessage = (message: Message) => {
@@ -35,6 +35,12 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
       socket.off("message", handleMessage);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -55,7 +61,9 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    if (e.target.value.length <= 1000) {
+      setInput(e.target.value);
+    }
 
     const el = textareaRef.current;
     if (el) {
@@ -65,29 +73,32 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
   };
 
   return (
-    <Container maxWidth="" className="w-1/4 bg-chat-bg">
-      <div className="h-full flex flex-col p-4">
-        <div className="flex-1 overflow-y-auto mb-8 space-y-3 pr-1">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className="bg-white rounded-md p-2 shadow-sm relative"
-            >
-              <div className="font-semibold text-dark-text text-sm mb-1">
-                {msg.username}
-              </div>
-              <div className="text-base break-words">{msg.text}</div>
-              <div className="text-xs text-gray-500 absolute bottom-1 right-2">
-                {new Date(msg.time).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
+    <div className="h-full flex flex-col p-4">
+      <div
+        className="flex-1 overflow-y-auto mb-8 space-y-3 pr-1"
+        ref={messagesEndRef}
+      >
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className="bg-white rounded-md p-2 shadow-sm relative"
+          >
+            <div className="font-semibold text-dark-text text-sm mb-1">
+              {msg.username}
             </div>
-          ))}
-        </div>
+            <div className="text-base break-words mb-2">{msg.text}</div>
+            <div className="text-xs text-gray-500 absolute bottom-1 right-2">
+              {new Date(msg.time).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
 
-        <div className="flex gap-2">
+      <div className="flex gap-2 flex-col">
+        <div className=" flex gap-2">
           <textarea
             ref={textareaRef}
             value={input}
@@ -99,7 +110,7 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
               }
             }}
             className="flex-1 rounded-md p-2 text-black text-[16px] bg-white resize-vertical 
-             min-h-[40px] max-h-[150px] overflow-y-auto 
+             min-h-[60px] max-h-[150px] overflow-y-auto 
              focus:outline-none focus:ring-2 focus:ring-green-100"
             placeholder="Type a message..."
           />
@@ -110,7 +121,10 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
             Send
           </button>
         </div>
+        <div className="self-end pr-20 text-[12px]">
+          <span>{input.length} / 1000</span>
+        </div>
       </div>
-    </Container>
+    </div>
   );
 };
