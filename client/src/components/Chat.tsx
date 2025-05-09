@@ -1,64 +1,21 @@
 import React from "react";
 import { useUserStore } from "../store/user";
-import socket from "../socket/socket";
-import { nanoid } from "nanoid";
+import { sendMessage } from "../lib/sendMessage";
+import { useChatMessages } from "../hooks/useChatMessages";
+import { useScrollToBottom } from "../hooks/useScrollToBottom";
 
 interface Props {
   roomId: string;
 }
 
-interface Message {
-  id: string;
-  text: string;
-  username?: string;
-  time: number;
-}
-
 export const Chat: React.FC<Props> = ({ roomId }) => {
-  const [messages, setMessages] = React.useState<Message[]>([]);
+  const { messages } = useChatMessages();
   const [input, setInput] = React.useState("");
   const username = useUserStore((state) => state.username);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    const handleMessage = (message: Message) => {
-      console.log("📩 Received message:", message);
-
-      const username = message.username?.trim() || "Anonymous";
-      const processedMessage = { ...message, username };
-      setMessages((prev) => [...prev, processedMessage]);
-    };
-
-    socket.on("message", handleMessage);
-
-    return () => {
-      socket.off("message", handleMessage);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const sendMessage = () => {
-    if (!input.trim()) return;
-
-    socket.emit("message", {
-      roomId,
-      id: nanoid(),
-      text: input.trim(),
-      username: username?.trim() || "Anonymous",
-      time: Date.now(),
-    });
-
-    console.log("Sending message", { roomId, text: input, username });
-
-    setInput("");
-  };
-
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  useScrollToBottom(messagesEndRef, [messages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (e.target.value.length <= 1000) {
@@ -72,29 +29,46 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
     }
   };
 
+  const handleSendMessage = () => {
+    if (!input.trim()) return;
+
+    sendMessage({ roomId, text: input, username, type: "user" });
+
+    setInput("");
+  };
+
   return (
     <div className="h-full flex flex-col p-4">
       <div
         className="flex-1 overflow-y-auto mb-8 space-y-3 pr-1"
         ref={messagesEndRef}
       >
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className="bg-white rounded-md p-2 shadow-sm relative"
-          >
-            <div className="font-semibold text-dark-text text-sm mb-1">
-              {msg.username}
+        {messages.map((msg) =>
+          msg.type === "system" ? (
+            <div
+              key={msg.id}
+              className="text-center text-dark-text text-sm italic"
+            >
+              {msg.text}
             </div>
-            <div className="text-base break-words mb-2">{msg.text}</div>
-            <div className="text-xs text-gray-500 absolute bottom-1 right-2">
-              {new Date(msg.time).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+          ) : (
+            <div
+              key={msg.id}
+              className="bg-white rounded-md p-2 shadow-sm relative"
+            >
+              <div className="font-semibold text-dark-text text-sm mb-1">
+                {msg.username}
+              </div>
+              <div className="text-base break-words mb-2">{msg.text}</div>
+              <div className="text-xs text-gray-500 absolute bottom-1 right-2">
+                {new Date(msg.time).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
       </div>
 
       <div className="flex gap-2 flex-col">
@@ -106,7 +80,7 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                handleSendMessage();
               }
             }}
             className="flex-1 rounded-md p-2 text-black text-[16px] bg-white resize-vertical 
@@ -115,7 +89,7 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
             placeholder="Type a message..."
           />
           <button
-            onClick={sendMessage}
+            onClick={handleSendMessage}
             className="btn-dark text-light-text text-[16px] p-2 w-[16%] rounded-md hover:bg-green-700 cursor-pointer"
           >
             Send

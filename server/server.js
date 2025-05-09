@@ -3,7 +3,8 @@ const http = require("http");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
-const clearChatHistory = require('./services/clearChatHistory');
+const clearChatHistory = require("./services/clearChatHistory");
+const { nanoid } = require("nanoid");
 
 const { Server } = require("socket.io");
 
@@ -75,7 +76,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("join-room", ({ roomId }) => {
+  socket.on("join-room", ({ roomId, username }) => {
     const room = rooms.get(roomId);
     if (room) {
       socket.join(roomId);
@@ -88,16 +89,28 @@ io.on("connection", (socket) => {
       }
 
       console.log(`🔁 User ${socket.id} joined room ${roomId}`);
+
+      const systemMessage = {
+        id: nanoid(),
+        roomId,
+        text: `${username} joined the chat`,
+        username,
+        time: Date.now(),
+        type: "system",
+      };
+
+      io.to(roomId).emit("message", systemMessage);
+
       io.emit("update-rooms", getVisibleRooms());
     }
   });
 
-  socket.on("message", ({ roomId, id, text, username, time }) => {
+  socket.on("message", ({ roomId, id, text, username, time, type }) => {
     if (!roomId) {
       return;
     }
 
-    const message = { id, text, username, time };
+    const message = { id, text, username, time, type };
 
     const chatDir = path.join(__dirname, "temp", "chats");
     const filePath = path.join(chatDir, `${roomId}.json`);
@@ -114,15 +127,15 @@ io.on("connection", (socket) => {
         console.error("❌ Error reading chat file:", err);
       }
     }
-  
+
     history.push(message);
-  
+
     try {
       fs.writeFileSync(filePath, JSON.stringify(history, null, 2), "utf-8");
       console.log(`💾 Saved message to ${filePath}`);
     } catch (err) {
       console.error("❌ Error saving chat:", err);
-    }  
+    }
 
     console.log(`✉️  User ${username} sent '${text}' in room ${roomId}`);
     io.to(roomId).emit("message", { id, text, username, time });

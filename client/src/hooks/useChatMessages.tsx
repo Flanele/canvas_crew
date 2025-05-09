@@ -1,18 +1,20 @@
-
-import { nanoid } from "nanoid";
-import socket from "../socket/socket";
 import React from "react";
+import socket from "../socket/socket";
 
-interface Message {
-    id: string;
-    text: string;
-    username?: string;
-    time: number;
-  }
+export interface Message {
+  id: string;
+  text: string;
+  username?: string;
+  time: number;
+  type?: "user" | "system";
+}
 
-export const useChatMessages = (roomId: string, username: string) => {
+interface UseChatMessagesReturn {
+  messages: Message[];
+}
+
+export const useChatMessages = (): UseChatMessagesReturn => {
   const [messages, setMessages] = React.useState<Message[]>([]);
-  const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     const handleMessage = (message: Message) => {
@@ -29,21 +31,6 @@ export const useChatMessages = (roomId: string, username: string) => {
       socket.off("message", handleMessage);
     };
   }, []);
-  
-  React.useEffect(() => {
-    messagesEndRef.current?.scrollTo(0, messagesEndRef.current.scrollHeight);
-  }, [messages]);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-    socket.emit("message", {
-      roomId,
-      id: nanoid(),
-      text: text.trim(),
-      username: username?.trim() || "Anonymous",
-      time: Date.now(),
-    });
-  };
-
-  return { messages, sendMessage, messagesEndRef };
+  return { messages };
 };

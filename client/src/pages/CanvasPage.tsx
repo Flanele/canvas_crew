@@ -2,17 +2,18 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import socket from "../socket/socket";
 import { Header } from "../components/Header";
-import { Container } from "../components/Container";
 import { Chat } from "../components/Chat";
+import { useUserStore } from "../store/user";
 
 export default function CanvasPage() {
   const { id } = useParams<{ id: string }>();
+  const username = useUserStore((state) => state.username);
 
   if (!id) return <div>Room ID is missing</div>;
 
   React.useEffect(() => {
     if (socket && id) {
-      socket.emit("join-room", { roomId: id });
+      socket.emit("join-room", { roomId: id, username: username || 'Anonymous' });
     }
   }, [socket, id]);
 
