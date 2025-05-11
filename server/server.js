@@ -138,7 +138,7 @@ io.on("connection", (socket) => {
     }
 
     console.log(`✉️  User ${username} sent '${text}' in room ${roomId}`);
-    io.to(roomId).emit("message", { id, text, username, time });
+    io.to(roomId).emit("message", { id, text, username, time, type });
   });
 });
 
