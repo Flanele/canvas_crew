@@ -140,6 +140,15 @@ io.on("connection", (socket) => {
     console.log(`✉️  User ${username} sent '${text}' in room ${roomId}`);
     io.to(roomId).emit("message", { id, text, username, time, type });
   });
+
+  socket.on("start-line", ({ roomId, point }) => {
+    socket.to(roomId).emit("start-line", { roomId, point });
+  });
+  
+  socket.on("draw-line", ({ roomId, point }) => {
+    socket.to(roomId).emit("draw-line", { roomId, point });
+  }); 
+  
 });
 
 // --- REST API ---

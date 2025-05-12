@@ -4,8 +4,8 @@ import socket from "../socket/socket";
 import { Header } from "../components/Header";
 import { Chat } from "../components/Chat";
 import { useUserStore } from "../store/user";
-import { ColorPicker } from "../components/ColorPicker";
 import { Canvas } from "../components/Canvas";
+import { ToolBar } from "../components/Toolbar";
 
 export default function CanvasPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,17 +26,17 @@ export default function CanvasPage() {
       <div className="flex flex-grow">
 
         {/* Левый блок */}
-        <div className="w-1/4 h-[calc(100vh-62px)] border-r-1 border-border">
-          <ColorPicker />
+        <div className="w-[20%] h-[calc(100vh-62px)] border-r-1 border-border">
+          <ToolBar />
         </div>
 
         {/* Центральный блок */}
-        <div className="w-1/2 bg-gray-200 h-[calc(100vh-62px)]">
-          <Canvas />
+        <div className="w-[60%] bg-gray-200 h-[calc(100vh-62px)]">
+          <Canvas roomId={id} />
         </div>
 
         {/* Чат справа */}
-        <div className="w-1/4 h-[calc(100vh-62px)] overflow-hidden bg-chat-bg border-l-1 border-border">
+        <div className="w-[20%] h-[calc(100vh-62px)] overflow-hidden bg-chat-bg border-l-1 border-border">
           <Chat roomId={id} />
         </div>
 

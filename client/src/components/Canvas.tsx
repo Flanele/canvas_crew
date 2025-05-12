@@ -2,12 +2,24 @@ import React from "react";
 import { Stage, Layer, Line } from "react-konva";
 import Konva from "konva";
 import { useZoom } from "../hooks/useZoom";
+import { useCanvasStore } from "../store/canvas";
+import socket from "../socket/socket";
 
-export const Canvas = () => {
-  const [lines, setLines] = React.useState<number[][]>([]);
+interface Props {
+  roomId: string;
+}
+
+export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null); // scrollable container
+
+  const lines =
+    useCanvasStore(
+      React.useCallback((state) => state.canvases[roomId], [roomId])
+    ) || [];
+  const startLine = useCanvasStore((state) => state.startLine);
+  const updateLine = useCanvasStore((state) => state.updateLine);
 
   const { scale, handleWheel } = useZoom(stageRef);
 
@@ -15,6 +27,26 @@ export const Canvas = () => {
   const BASE_HEIGHT = 450;
   const WORKSPACE_WIDTH = 2200;
   const WORKSPACE_HEIGHT = 1400;
+
+  React.useEffect(() => {
+    const handleStart = ({ roomId: incomingRoomId, point }: { roomId: string; point: [number, number] }) => {
+      if (incomingRoomId !== roomId) return;
+      startLine(incomingRoomId, point);
+    };
+  
+    const handleMove = ({ roomId: incomingRoomId, point }: { roomId: string; point: [number, number] }) => {
+      if (incomingRoomId !== roomId) return;
+      updateLine(incomingRoomId, point);
+    };
+  
+    socket.on("start-line", handleStart);
+    socket.on("draw-line", handleMove);
+  
+    return () => {
+      socket.off("start-line", handleStart);
+      socket.off("draw-line", handleMove);
+    };
+  }, [roomId]);
 
   const handleMouseDown = () => {
     const stage = stageRef.current;
@@ -26,7 +58,9 @@ export const Canvas = () => {
     const y = pos.y / scale;
 
     isDrawing.current = true;
-    setLines((prev) => [...prev, [x, y]]);
+    startLine(roomId, [x, y]);
+
+    socket.emit("start-line", { roomId, point: [x, y] });
   };
 
   const handleMouseMove = () => {
@@ -39,11 +73,9 @@ export const Canvas = () => {
     const x = pos.x / scale;
     const y = pos.y / scale;
 
-    setLines((prev) => {
-      const lastLine = prev[prev.length - 1];
-      const updated = [...lastLine, x, y];
-      return [...prev.slice(0, -1), updated];
-    });
+    updateLine(roomId, [x, y]);
+
+    socket.emit("draw-line", { roomId, point: [x, y] });
   };
 
   const handleMouseUp = () => {
