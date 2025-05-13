@@ -13,6 +13,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null); // scrollable container
+  const color = useCanvasStore((state) => state.color);
 
   const lines =
     useCanvasStore(
@@ -29,19 +30,33 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const WORKSPACE_HEIGHT = 1400;
 
   React.useEffect(() => {
-    const handleStart = ({ roomId: incomingRoomId, point }: { roomId: string; point: [number, number] }) => {
+    const handleStart = ({
+      roomId: incomingRoomId,
+      point,
+      color: incomingColor
+    }: {
+      roomId: string;
+      point: [number, number];
+      color: string
+    }) => {
       if (incomingRoomId !== roomId) return;
-      startLine(incomingRoomId, point);
+      startLine(incomingRoomId, point, incomingColor);
     };
-  
-    const handleMove = ({ roomId: incomingRoomId, point }: { roomId: string; point: [number, number] }) => {
+
+    const handleMove = ({
+      roomId: incomingRoomId,
+      point,
+    }: {
+      roomId: string;
+      point: [number, number];
+    }) => {
       if (incomingRoomId !== roomId) return;
       updateLine(incomingRoomId, point);
     };
-  
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
-  
+
     return () => {
       socket.off("start-line", handleStart);
       socket.off("draw-line", handleMove);
@@ -60,7 +75,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     isDrawing.current = true;
     startLine(roomId, [x, y]);
 
-    socket.emit("start-line", { roomId, point: [x, y] });
+    socket.emit("start-line", { roomId, point: [x, y], color });
   };
 
   const handleMouseMove = () => {
@@ -129,11 +144,11 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
             onWheel={handleWheel}
           >
             <Layer>
-              {lines.map((points, i) => (
+              {lines.map((line, i) => (
                 <Line
                   key={i}
-                  points={points}
-                  stroke="black"
+                  points={line.points.flat()}
+                  stroke={line.color}
                   strokeWidth={2}
                   tension={0.5}
                   lineCap="round"
