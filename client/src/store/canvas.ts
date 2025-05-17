@@ -1,14 +1,16 @@
 import { create } from "zustand";
 
 type Point = [number, number];
-type ColoredLine = { points: Point[]; color: string };
+type ColoredLine = { points: Point[]; color: string, strokeWidth: number };
 type RoomId = string;
 
 interface CanvasStore {
   canvases: Record<RoomId, ColoredLine[]>;
   color: string;
+  strokeWidth: number;
   setColor: (color: string) => void;
-  startLine: (roomId: RoomId, point: Point, color?: string) => void;
+  setStrokeWidth: (strokeWodth: number) => void;
+  startLine: (roomId: RoomId, point: Point, color?: string, strokeWidth?: number) => void;
   updateLine: (roomId: RoomId, point: Point) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
@@ -16,17 +18,23 @@ interface CanvasStore {
 export const useCanvasStore = create<CanvasStore>((set) => ({
   canvases: {},
   color: '#00000',
+  strokeWidth: 2,
 
   setColor: (color) => {
     set({ color })
   },
 
-  startLine: (roomId, point, color) =>
+  setStrokeWidth: (strokeWidth) => {
+    set({ strokeWidth })
+  },
+
+  startLine: (roomId, point, color, strokeWidth) =>
     set((state) => {
       const current = state.canvases[roomId] || [];
       const newLine = {
         points: [point],
-        color: color ?? state.color, // если не передали — используем свой цвет
+        color: color ?? state.color,
+        strokeWidth: strokeWidth ?? state.strokeWidth, // если не передали — используем свой цвет
       };
       return {
         canvases: {

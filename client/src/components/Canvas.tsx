@@ -14,11 +14,13 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null); // scrollable container
   const color = useCanvasStore((state) => state.color);
+  const strokeWidth = useCanvasStore((state) => state.strokeWidth);
 
   const lines =
     useCanvasStore(
       React.useCallback((state) => state.canvases[roomId], [roomId])
     ) || [];
+
   const startLine = useCanvasStore((state) => state.startLine);
   const updateLine = useCanvasStore((state) => state.updateLine);
 
@@ -33,14 +35,16 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     const handleStart = ({
       roomId: incomingRoomId,
       point,
-      color: incomingColor
+      color: incomingColor,
+      strokeWidth: incomingStrokeWidth
     }: {
       roomId: string;
       point: [number, number];
-      color: string
+      color: string,
+      strokeWidth: number
     }) => {
       if (incomingRoomId !== roomId) return;
-      startLine(incomingRoomId, point, incomingColor);
+      startLine(incomingRoomId, point, incomingColor, incomingStrokeWidth);
     };
 
     const handleMove = ({
@@ -75,7 +79,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     isDrawing.current = true;
     startLine(roomId, [x, y]);
 
-    socket.emit("start-line", { roomId, point: [x, y], color });
+    socket.emit("start-line", { roomId, point: [x, y], color, strokeWidth });
   };
 
   const handleMouseMove = () => {
@@ -146,13 +150,15 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
             <Layer>
               {lines.map((line, i) => (
                 <Line
-                  key={i}
-                  points={line.points.flat()}
-                  stroke={line.color}
-                  strokeWidth={2}
-                  tension={0.5}
-                  lineCap="round"
-                />
+                key={i}
+                points={line.points.flat()}
+                stroke={line.color}
+                strokeWidth={line.strokeWidth}
+                tension={0}
+                lineCap="round"
+                lineJoin="round"
+                shadowBlur={strokeWidth > 10 ? 1 : 0}
+              />
               ))}
             </Layer>
           </Stage>
