@@ -15,6 +15,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const containerRef = React.useRef<HTMLDivElement>(null); // scrollable container
   const color = useCanvasStore((state) => state.color);
   const strokeWidth = useCanvasStore((state) => state.strokeWidth);
+  const opacity = useCanvasStore((state) => state.opacity);
 
   const lines =
     useCanvasStore(
@@ -36,15 +37,17 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       roomId: incomingRoomId,
       point,
       color: incomingColor,
-      strokeWidth: incomingStrokeWidth
+      strokeWidth: incomingStrokeWidth,
+      opacity: incomingOpacity
     }: {
       roomId: string;
       point: [number, number];
       color: string,
-      strokeWidth: number
+      strokeWidth: number,
+      opacity: number
     }) => {
       if (incomingRoomId !== roomId) return;
-      startLine(incomingRoomId, point, incomingColor, incomingStrokeWidth);
+      startLine(incomingRoomId, point, incomingColor, incomingStrokeWidth, incomingOpacity);
     };
 
     const handleMove = ({
@@ -79,7 +82,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     isDrawing.current = true;
     startLine(roomId, [x, y]);
 
-    socket.emit("start-line", { roomId, point: [x, y], color, strokeWidth });
+    socket.emit("start-line", { roomId, point: [x, y], color, strokeWidth, opacity });
   };
 
   const handleMouseMove = () => {
@@ -154,10 +157,10 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
                 points={line.points.flat()}
                 stroke={line.color}
                 strokeWidth={line.strokeWidth}
+                opacity={line.opacity}
                 tension={0}
                 lineCap="round"
                 lineJoin="round"
-                shadowBlur={strokeWidth > 10 ? 1 : 0}
               />
               ))}
             </Layer>

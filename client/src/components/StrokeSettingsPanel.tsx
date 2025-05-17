@@ -3,6 +3,8 @@ import { useCanvasStore } from "../store/canvas";
 export const StrokeSettingsPanel = () => {
   const strokeWidth = useCanvasStore((state) => state.strokeWidth);
   const setStrokeWidth = useCanvasStore((state) => state.setStrokeWidth);
+  const opacity = useCanvasStore((state) => state.opacity);
+  const setOpacity = useCanvasStore((state) => state.setOpacity);
 
   const strokeWidthOptions = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 30, 40];
 
@@ -41,8 +43,9 @@ export const StrokeSettingsPanel = () => {
           min={0.1}
           max={1}
           step={0.1}
-          defaultValue={1}
+          defaultValue={opacity}
           className="w-full accent-green-800 cursor-pointer"
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOpacity(Number(e.target.value))}
         />
       </div>
     </div>
