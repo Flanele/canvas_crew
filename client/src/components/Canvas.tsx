@@ -1,9 +1,10 @@
 import React from "react";
-import { Stage, Layer, Line } from "react-konva";
+import { Stage } from "react-konva";
 import Konva from "konva";
 import { useZoom } from "../hooks/useZoom";
 import { useCanvasStore } from "../store/canvas";
 import socket from "../socket/socket";
+import { CanvasLayer } from "./CanvasLayer";
 
 interface Props {
   roomId: string;
@@ -16,11 +17,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const color = useCanvasStore((state) => state.color);
   const strokeWidth = useCanvasStore((state) => state.strokeWidth);
   const opacity = useCanvasStore((state) => state.opacity);
-
-  const lines =
-    useCanvasStore(
-      React.useCallback((state) => state.canvases[roomId], [roomId])
-    ) || [];
+  const tool = useCanvasStore((state) => state.tool);
 
   const startLine = useCanvasStore((state) => state.startLine);
   const updateLine = useCanvasStore((state) => state.updateLine);
@@ -38,16 +35,25 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       point,
       color: incomingColor,
       strokeWidth: incomingStrokeWidth,
-      opacity: incomingOpacity
+      opacity: incomingOpacity,
+      tool: incomingTool,
     }: {
       roomId: string;
       point: [number, number];
-      color: string,
-      strokeWidth: number,
-      opacity: number
+      color: string;
+      strokeWidth: number;
+      opacity: number;
+      tool: string;
     }) => {
       if (incomingRoomId !== roomId) return;
-      startLine(incomingRoomId, point, incomingColor, incomingStrokeWidth, incomingOpacity);
+      startLine(
+        incomingRoomId,
+        point,
+        incomingColor,
+        incomingStrokeWidth,
+        incomingOpacity,
+        incomingTool
+      );
     };
 
     const handleMove = ({
@@ -82,7 +88,14 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     isDrawing.current = true;
     startLine(roomId, [x, y]);
 
-    socket.emit("start-line", { roomId, point: [x, y], color, strokeWidth, opacity });
+    socket.emit("start-line", {
+      roomId,
+      point: [x, y],
+      color,
+      strokeWidth,
+      opacity,
+      tool,
+    });
   };
 
   const handleMouseMove = () => {
@@ -150,20 +163,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
             onMouseUp={handleMouseUp}
             onWheel={handleWheel}
           >
-            <Layer>
-              {lines.map((line, i) => (
-                <Line
-                key={i}
-                points={line.points.flat()}
-                stroke={line.color}
-                strokeWidth={line.strokeWidth}
-                opacity={line.opacity}
-                tension={0}
-                lineCap="round"
-                lineJoin="round"
-              />
-              ))}
-            </Layer>
+            <CanvasLayer roomId={roomId} />
           </Stage>
         </div>
       </div>

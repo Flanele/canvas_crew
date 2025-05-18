@@ -1,18 +1,22 @@
 import { create } from "zustand";
 
 type Point = [number, number];
-type ColoredLine = { points: Point[]; color: string, strokeWidth: number, opacity: number };
+type ColoredLine = { points: Point[]; color: string, strokeWidth: number, opacity: number, tool: string };
 type RoomId = string;
+
+type Tool = 'Pencil' | 'Brush' | 'Eraser' | 'Marker' | 'Rect' | 'Circle' | 'Text' | 'Select';
 
 interface CanvasStore {
   canvases: Record<RoomId, ColoredLine[]>;
   color: string;
   strokeWidth: number;
   opacity: number;
+  tool: Tool;
   setColor: (color: string) => void;
   setStrokeWidth: (strokeWodth: number) => void;
   setOpacity: (opacity: number) => void;
-  startLine: (roomId: RoomId, point: Point, color?: string, strokeWidth?: number, opacity?: number) => void;
+  setTool: (tool: Tool) => void;
+  startLine: (roomId: RoomId, point: Point, color?: string, strokeWidth?: number, opacity?: number, tool?: string) => void;
   updateLine: (roomId: RoomId, point: Point) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
@@ -22,6 +26,7 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
   color: '#000000',
   strokeWidth: 2,
   opacity: 1,
+  tool: 'Pencil',
 
   setColor: (color) => {
     set({ color })
@@ -35,14 +40,17 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
     set({ opacity })
   },
 
-  startLine: (roomId, point, color, strokeWidth, opacity) =>
+  setTool: (tool) => set({ tool }),
+
+  startLine: (roomId, point, color, strokeWidth, opacity, tool) =>
     set((state) => {
       const current = state.canvases[roomId] || [];
       const newLine = {
         points: [point],
         color: color ?? state.color,
         strokeWidth: strokeWidth ?? state.strokeWidth,
-        opacity: opacity ?? state.opacity
+        opacity: opacity ?? state.opacity,
+        tool: tool ?? state.tool,
       };
       return {
         canvases: {
