@@ -1,86 +1,177 @@
 import { create } from "zustand";
+import { nanoid } from "nanoid";
 
 type Point = [number, number];
-type ColoredLine = { points: Point[]; color: string, strokeWidth: number, opacity: number, tool: string };
 type RoomId = string;
 
-type Tool = 'Pencil' | 'Brush' | 'Eraser' | 'Marker' | 'Rect' | 'Circle' | 'Text' | 'Select';
+export type Tool = 'Pencil' | 'Brush' | 'Eraser' | 'Marker' | 'Rect' | 'Circle' | 'Text' | 'Select';
+
+interface BaseShape {
+  id: string;
+  tool: Tool;
+  color: string;
+  strokeWidth: number;
+  opacity: number;
+}
+
+interface LineShape extends BaseShape {
+  type: 'line';
+  points: Point[];
+}
+
+interface RectShape extends BaseShape {
+  type: 'rect';
+  start: Point;
+  end: Point;
+}
+
+interface CircleShape extends BaseShape {
+  type: 'circle';
+  center: Point;
+  radius: number;
+}
+
+export type CanvasElement = LineShape | RectShape | CircleShape;
 
 interface CanvasStore {
-  canvases: Record<RoomId, ColoredLine[]>;
+  canvases: Record<RoomId, CanvasElement[]>;
   color: string;
   strokeWidth: number;
   opacity: number;
   tool: Tool;
+
   setColor: (color: string) => void;
-  setStrokeWidth: (strokeWodth: number) => void;
+  setStrokeWidth: (strokeWidth: number) => void;
   setOpacity: (opacity: number) => void;
   setTool: (tool: Tool) => void;
-  startLine: (roomId: RoomId, point: Point, color?: string, strokeWidth?: number, opacity?: number, tool?: string) => void;
-  updateLine: (roomId: RoomId, point: Point) => void;
+
+  startElement: (
+    roomId: RoomId,
+    point: Point,
+    options?: {
+      id?: string;
+      color?: string;
+      strokeWidth?: number;
+      opacity?: number;
+      tool?: Tool;
+    }
+  ) => void;
+
+  updateElement: (roomId: RoomId, point: Point) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
 
-export const useCanvasStore = create<CanvasStore>((set) => ({
+export const useCanvasStore = create<CanvasStore>((set, get) => ({
   canvases: {},
   color: '#000000',
   strokeWidth: 2,
   opacity: 1,
   tool: 'Pencil',
 
-  setColor: (color) => {
-    set({ color })
-  },
-
-  setStrokeWidth: (strokeWidth) => {
-    set({ strokeWidth })
-  },
-
-  setOpacity: (opacity) => {
-    set({ opacity })
-  },
-
+  setColor: (color) => set({ color }),
+  setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
+  setOpacity: (opacity) => set({ opacity }),
   setTool: (tool) => set({ tool }),
 
-  startLine: (roomId, point, color, strokeWidth, opacity, tool) =>
-    set((state) => {
-      const current = state.canvases[roomId] || [];
-      const newLine = {
-        points: [point],
-        color: color ?? state.color,
-        strokeWidth: strokeWidth ?? state.strokeWidth,
-        opacity: opacity ?? state.opacity,
-        tool: tool ?? state.tool,
-      };
-      return {
-        canvases: {
-          ...state.canvases,
-          [roomId]: [...current, newLine],
-        },
-      };
-    }),
+  startElement: (roomId, point, options) => {
+    const state = get();
+    const current = state.canvases[roomId] || [];
 
-  updateLine: (roomId, point) =>
-    set((state) => {
-      const lines = state.canvases[roomId] || [];
-      const last = lines[lines.length - 1];
-      if (!last) return { canvases: state.canvases };
-  
-      const updatedLine = {
-        ...last,
-        points: [...last.points, point],
-      };
-  
-      return {
-        canvases: {
-          ...state.canvases,
-          [roomId]: [...lines.slice(0, -1), updatedLine],
-        },
-      };
-    }),
+    const id = options?.id ?? nanoid();
+    const tool = options?.tool ?? state.tool;
+    const color = options?.color ?? state.color;
+    const strokeWidth = options?.strokeWidth ?? state.strokeWidth;
+    const opacity = options?.opacity ?? state.opacity;
 
-  resetCanvas: (roomId) =>
-    set((state) => ({
-      canvases: { ...state.canvases, [roomId]: [] },
-    })),
+    let newElement: CanvasElement;
+
+    switch (tool) {
+      case 'Rect':
+        newElement = {
+          id,
+          type: 'rect',
+          tool,
+          color,
+          strokeWidth,
+          opacity,
+          start: point,
+          end: point,
+        };
+        break;
+
+      case 'Circle':
+        newElement = {
+          id,
+          type: 'circle',
+          tool,
+          color,
+          strokeWidth,
+          opacity,
+          center: point,
+          radius: 0,
+        };
+        break;
+
+      default:
+        newElement = {
+          id,
+          type: 'line',
+          tool,
+          color,
+          strokeWidth,
+          opacity,
+          points: [point],
+        };
+        break;
+    }
+
+    set({
+      canvases: {
+        ...state.canvases,
+        [roomId]: [...current, newElement],
+      },
+    });
+  },
+
+  updateElement: (roomId, point) => {
+    const canvases = get().canvases;
+    const elements = canvases[roomId] || [];
+    const last = elements[elements.length - 1];
+    if (!last) return;
+
+    let updated: CanvasElement;
+
+    switch (last.type) {
+      case 'line':
+        updated = { ...last, points: [...last.points, point] };
+        break;
+      case 'rect':
+        updated = { ...last, end: point };
+        break;
+      case 'circle': {
+        const dx = point[0] - last.center[0];
+        const dy = point[1] - last.center[1];
+        const radius = Math.sqrt(dx * dx + dy * dy);
+        updated = { ...last, radius };
+        break;
+      }
+    }
+
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: [...elements.slice(0, -1), updated],
+      },
+    });
+  },
+
+  resetCanvas: (roomId) => {
+    const canvases = get().canvases;
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: [],
+      },
+    });
+  },
 }));

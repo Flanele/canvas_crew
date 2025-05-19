@@ -2,9 +2,10 @@ import React from "react";
 import { Stage } from "react-konva";
 import Konva from "konva";
 import { useZoom } from "../hooks/useZoom";
-import { useCanvasStore } from "../store/canvas";
+import { Tool, useCanvasStore } from "../store/canvas";
 import socket from "../socket/socket";
 import { CanvasLayer } from "./CanvasLayer";
+import { nanoid } from "nanoid";
 
 interface Props {
   roomId: string;
@@ -13,14 +14,15 @@ interface Props {
 export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null); // scrollable container
-  const color = useCanvasStore((state) => state.color);
-  const strokeWidth = useCanvasStore((state) => state.strokeWidth);
-  const opacity = useCanvasStore((state) => state.opacity);
-  const tool = useCanvasStore((state) => state.tool);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const startLine = useCanvasStore((state) => state.startLine);
-  const updateLine = useCanvasStore((state) => state.updateLine);
+  const color = useCanvasStore((s) => s.color);
+  const strokeWidth = useCanvasStore((s) => s.strokeWidth);
+  const opacity = useCanvasStore((s) => s.opacity);
+  const tool = useCanvasStore((s) => s.tool);
+
+  const startElement = useCanvasStore((s) => s.startElement);
+  const updateElement = useCanvasStore((s) => s.updateElement);
 
   const { scale, handleWheel } = useZoom(stageRef);
 
@@ -33,27 +35,28 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     const handleStart = ({
       roomId: incomingRoomId,
       point,
-      color: incomingColor,
-      strokeWidth: incomingStrokeWidth,
-      opacity: incomingOpacity,
-      tool: incomingTool,
+      id,
+      color,
+      strokeWidth,
+      opacity,
+      tool,
     }: {
       roomId: string;
       point: [number, number];
-      color: string;
-      strokeWidth: number;
-      opacity: number;
-      tool: string;
+      id: string;
+      color?: string;
+      strokeWidth?: number;
+      opacity?: number;
+      tool?: Tool;
     }) => {
       if (incomingRoomId !== roomId) return;
-      startLine(
-        incomingRoomId,
-        point,
-        incomingColor,
-        incomingStrokeWidth,
-        incomingOpacity,
-        incomingTool
-      );
+      startElement(incomingRoomId, point, {
+        id,
+        color,
+        strokeWidth,
+        opacity,
+        tool,
+      });
     };
 
     const handleMove = ({
@@ -64,15 +67,15 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       point: [number, number];
     }) => {
       if (incomingRoomId !== roomId) return;
-      updateLine(incomingRoomId, point);
+      updateElement(incomingRoomId, point);
     };
 
-    socket.on("start-line", handleStart);
-    socket.on("draw-line", handleMove);
+    socket.on('start-line', handleStart);
+    socket.on('draw-line', handleMove);
 
     return () => {
-      socket.off("start-line", handleStart);
-      socket.off("draw-line", handleMove);
+      socket.off('start-line', handleStart);
+      socket.off('draw-line', handleMove);
     };
   }, [roomId]);
 
@@ -84,12 +87,21 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
     const x = pos.x / scale;
     const y = pos.y / scale;
+    const id = nanoid();
 
     isDrawing.current = true;
-    startLine(roomId, [x, y]);
 
-    socket.emit("start-line", {
+    startElement(roomId, [x, y], {
+      id,
+      color,
+      strokeWidth,
+      opacity,
+      tool,
+    });
+
+    socket.emit('start-line', {
       roomId,
+      id,
       point: [x, y],
       color,
       strokeWidth,
@@ -100,17 +112,19 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
   const handleMouseMove = () => {
     if (!isDrawing.current) return;
+
     const stage = stageRef.current;
     if (!stage) return;
+
     const pos = stage.getPointerPosition();
     if (!pos) return;
 
     const x = pos.x / scale;
     const y = pos.y / scale;
 
-    updateLine(roomId, [x, y]);
+    updateElement(roomId, [x, y]);
 
-    socket.emit("draw-line", { roomId, point: [x, y] });
+    socket.emit('draw-line', { roomId, point: [x, y] });
   };
 
   const handleMouseUp = () => {
