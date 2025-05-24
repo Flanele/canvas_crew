@@ -17,6 +17,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const color = useCanvasStore((s) => s.color);
+  const strokeColor = useCanvasStore((s) => s.strokeColor);
   const strokeWidth = useCanvasStore((s) => s.strokeWidth);
   const opacity = useCanvasStore((s) => s.opacity);
   const tool = useCanvasStore((s) => s.tool);
@@ -37,6 +38,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       point,
       id,
       color,
+      strokeColor,
       strokeWidth,
       opacity,
       tool,
@@ -45,6 +47,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       point: [number, number];
       id: string;
       color?: string;
+      strokeColor?: string;
       strokeWidth?: number;
       opacity?: number;
       tool?: Tool;
@@ -53,6 +56,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       startElement(incomingRoomId, point, {
         id,
         color,
+        strokeColor,
         strokeWidth,
         opacity,
         tool,
@@ -91,9 +95,12 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
     isDrawing.current = true;
 
+    const finalStrokeColor = strokeColor || color;
+
     startElement(roomId, [x, y], {
       id,
       color,
+      strokeColor: finalStrokeColor,
       strokeWidth,
       opacity,
       tool,
@@ -104,6 +111,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       id,
       point: [x, y],
       color,
+      strokeColor: finalStrokeColor,
       strokeWidth,
       opacity,
       tool,

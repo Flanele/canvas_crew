@@ -23,12 +23,14 @@ interface RectShape extends BaseShape {
   type: 'rect';
   start: Point;
   end: Point;
+  strokeColor: string;
 }
 
 interface CircleShape extends BaseShape {
   type: 'circle';
   center: Point;
   radius: number;
+  strokeColor: string;
 }
 
 export type CanvasElement = LineShape | RectShape | CircleShape;
@@ -36,11 +38,13 @@ export type CanvasElement = LineShape | RectShape | CircleShape;
 interface CanvasStore {
   canvases: Record<RoomId, CanvasElement[]>;
   color: string;
+  strokeColor: string | undefined;
   strokeWidth: number;
   opacity: number;
   tool: Tool;
 
   setColor: (color: string) => void;
+  setStrokeColor: (strokeColor: string) => void;
   setStrokeWidth: (strokeWidth: number) => void;
   setOpacity: (opacity: number) => void;
   setTool: (tool: Tool) => void;
@@ -51,6 +55,7 @@ interface CanvasStore {
     options?: {
       id?: string;
       color?: string;
+      strokeColor?: string;
       strokeWidth?: number;
       opacity?: number;
       tool?: Tool;
@@ -62,13 +67,16 @@ interface CanvasStore {
 }
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
+  
   canvases: {},
   color: '#000000',
+  strokeColor: undefined,
   strokeWidth: 2,
   opacity: 1,
   tool: 'Pencil',
 
   setColor: (color) => set({ color }),
+  setStrokeColor: (strokeColor) => set({ strokeColor }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
   setOpacity: (opacity) => set({ opacity }),
   setTool: (tool) => set({ tool }),
@@ -80,6 +88,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     const id = options?.id ?? nanoid();
     const tool = options?.tool ?? state.tool;
     const color = options?.color ?? state.color;
+    const strokeColor = options?.strokeColor ?? state.strokeColor ?? color;
     const strokeWidth = options?.strokeWidth ?? state.strokeWidth;
     const opacity = options?.opacity ?? state.opacity;
 
@@ -92,6 +101,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           type: 'rect',
           tool,
           color,
+          strokeColor,
           strokeWidth,
           opacity,
           start: point,
@@ -105,6 +115,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           type: 'circle',
           tool,
           color,
+          strokeColor,
           strokeWidth,
           opacity,
           center: point,

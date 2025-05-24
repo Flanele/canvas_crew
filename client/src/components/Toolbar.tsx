@@ -14,9 +14,11 @@ import {
 import { ToolIcon } from "./ToolIcon";
 import { StrokeSettingsPanel } from "./StrokeSettingsPanel";
 import { useCanvasStore } from "../store/canvas";
+import { StrokeColorPicker } from "./StrokeColorPicker";
 
 export const ToolBar = () => {
   const setTool = useCanvasStore((state) => state.setTool);
+  const tool = useCanvasStore((state) => state.tool);
 
   return (
     <div className="bg-[#D7DBD4] flex flex-col gap-10 h-full p-4">
@@ -25,26 +27,65 @@ export const ToolBar = () => {
         <ColorPicker />
       </div>
 
+      {(tool === "Circle" || tool === "Rect") && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs">Stroke color:</p>
+          <StrokeColorPicker />
+        </div>
+      )}
+
       {/* Tools */}
       <div className="flex flex-col items-center gap-4">
         {/* Row 1: Brushes */}
         <div className="flex gap-6">
-          <ToolIcon icon={<Pencil size={20} />} label="Pencil" onClick={() => setTool("Pencil")} />
-          <ToolIcon icon={<Brush size={20} />} label="Brush" onClick={() => setTool("Brush")} />
-          <ToolIcon icon={<PenTool size={20} />} label="Marker" onClick={() => setTool("Marker")} />
+          <ToolIcon
+            icon={<Pencil size={20} />}
+            label="Pencil"
+            onClick={() => setTool("Pencil")}
+          />
+          <ToolIcon
+            icon={<Brush size={20} />}
+            label="Brush"
+            onClick={() => setTool("Brush")}
+          />
+          <ToolIcon
+            icon={<PenTool size={20} />}
+            label="Marker"
+            onClick={() => setTool("Marker")}
+          />
         </div>
 
         {/* Row 2: Main actions */}
         <div className="flex gap-6">
-          <ToolIcon icon={<MousePointer2 size={20} />} label="Select" onClick={() => setTool("Select")} />
-          <ToolIcon icon={<Eraser size={20} />} label="Eraser" onClick={() => setTool("Eraser")} />
-          <ToolIcon icon={<Text size={20} />} label="Text" onClick={() => setTool("Text")} />
+          <ToolIcon
+            icon={<MousePointer2 size={20} />}
+            label="Select"
+            onClick={() => setTool("Select")}
+          />
+          <ToolIcon
+            icon={<Eraser size={20} />}
+            label="Eraser"
+            onClick={() => setTool("Eraser")}
+          />
+          <ToolIcon
+            icon={<Text size={20} />}
+            label="Text"
+            onClick={() => setTool("Text")}
+          />
         </div>
 
         {/* Row 3: Shapes */}
         <div className="flex gap-6">
-          <ToolIcon icon={<Square size={20} />} label="Rect" onClick={() => setTool("Rect")} />
-          <ToolIcon icon={<Circle size={20} />} label="Circle" onClick={() => setTool("Circle")} />
+          <ToolIcon
+            icon={<Square size={20} />}
+            label="Rect"
+            onClick={() => setTool("Rect")}
+          />
+          <ToolIcon
+            icon={<Circle size={20} />}
+            label="Circle"
+            onClick={() => setTool("Circle")}
+          />
         </div>
 
         {/* Divider */}
@@ -52,8 +93,16 @@ export const ToolBar = () => {
 
         {/* Row 4: Undo/Redo */}
         <div className="flex gap-6">
-          <ToolIcon icon={<Undo2 size={20} />} label="Undo" onClick={() => console.log("TODO: Undo")} />
-          <ToolIcon icon={<Redo2 size={20} />} label="Redo" onClick={() => console.log("TODO: Redo")} />
+          <ToolIcon
+            icon={<Undo2 size={20} />}
+            label="Undo"
+            onClick={() => console.log("TODO: Undo")}
+          />
+          <ToolIcon
+            icon={<Redo2 size={20} />}
+            label="Redo"
+            onClick={() => console.log("TODO: Redo")}
+          />
         </div>
       </div>
 

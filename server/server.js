@@ -141,8 +141,8 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("message", { id, text, username, time, type });
   });
 
-  socket.on("start-line", ({ roomId, id, point, color, strokeWidth, opacity, tool }) => {
-    socket.to(roomId).emit("start-line", { roomId, id, point, color, strokeWidth, opacity, tool });
+  socket.on("start-line", ({ roomId, id, point, color, strokeColor, strokeWidth, opacity, tool }) => {
+    socket.to(roomId).emit("start-line", { roomId, id, point, color, strokeColor, strokeWidth, opacity, tool });
   });
   
   socket.on("draw-line", ({ roomId, point }) => {
