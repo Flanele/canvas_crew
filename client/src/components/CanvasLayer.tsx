@@ -1,4 +1,4 @@
-import { Circle, Layer, Line, Rect } from "react-konva";
+import { Circle, Layer, Line, Rect, Text } from "react-konva";
 import { useCanvasStore } from "../store/canvas";
 import React from "react";
 import { LineConfig } from "konva/lib/shapes/Line";
@@ -103,6 +103,21 @@ export const CanvasLayer: React.FC<Props> = ({ roomId }) => {
                   fill={el.color}
                   stroke={el.strokeColor}
                   {...commonStyle}
+                />
+              );
+            }
+
+            case "text": {
+              return (
+                <Text
+                  key={el.id}
+                  x={el.point[0]}
+                  y={el.point[1]}
+                  text={el.text}
+                  fontSize={el.strokeWidth * 4} // масштабируем размер от strokeWidth
+                  fill={el.color}
+                  opacity={el.opacity}
+                  stroke={el.strokeColor}
                 />
               );
             }

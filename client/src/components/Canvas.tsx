@@ -42,6 +42,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       strokeWidth,
       opacity,
       tool,
+      text,
     }: {
       roomId: string;
       point: [number, number];
@@ -51,6 +52,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       strokeWidth?: number;
       opacity?: number;
       tool?: Tool;
+      text?: string;
     }) => {
       if (incomingRoomId !== roomId) return;
       startElement(incomingRoomId, point, {
@@ -60,8 +62,9 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
         strokeWidth,
         opacity,
         tool,
+        text,
       });
-    };
+    };    
 
     const handleMove = ({
       roomId: incomingRoomId,
@@ -88,15 +91,44 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     if (!stage) return;
     const pos = stage.getPointerPosition();
     if (!pos) return;
-
+  
     const x = pos.x / scale;
     const y = pos.y / scale;
     const id = nanoid();
-
-    isDrawing.current = true;
-
     const finalStrokeColor = strokeColor || color;
-
+  
+    if (tool === 'Text') {
+      const input = prompt('Enter text:');
+      if (!input) return;
+  
+      startElement(roomId, [x, y], {
+        id,
+        color,
+        strokeColor: finalStrokeColor,
+        strokeWidth,
+        opacity,
+        tool,
+        text: input,
+      });
+  
+      socket.emit('start-line', {
+        roomId,
+        id,
+        point: [x, y],
+        color,
+        strokeColor: finalStrokeColor,
+        strokeWidth,
+        opacity,
+        tool,
+        text: input,
+      });
+  
+      return; // don't start drawing
+    }
+  
+    // остальные фигуры
+    isDrawing.current = true;
+  
     startElement(roomId, [x, y], {
       id,
       color,
@@ -105,7 +137,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       opacity,
       tool,
     });
-
+  
     socket.emit('start-line', {
       roomId,
       id,

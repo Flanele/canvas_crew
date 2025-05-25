@@ -33,7 +33,14 @@ interface CircleShape extends BaseShape {
   strokeColor: string;
 }
 
-export type CanvasElement = LineShape | RectShape | CircleShape;
+interface TextShape extends BaseShape {
+  type: 'text';
+  point: Point;
+  text: string;
+  strokeColor: string;
+}
+
+export type CanvasElement = LineShape | RectShape | CircleShape | TextShape;
 
 interface CanvasStore {
   canvases: Record<RoomId, CanvasElement[]>;
@@ -42,12 +49,14 @@ interface CanvasStore {
   strokeWidth: number;
   opacity: number;
   tool: Tool;
+  text: string;
 
   setColor: (color: string) => void;
   setStrokeColor: (strokeColor: string) => void;
   setStrokeWidth: (strokeWidth: number) => void;
   setOpacity: (opacity: number) => void;
   setTool: (tool: Tool) => void;
+  setText: (text: string) => void;
 
   startElement: (
     roomId: RoomId,
@@ -59,27 +68,30 @@ interface CanvasStore {
       strokeWidth?: number;
       opacity?: number;
       tool?: Tool;
+      text?: string;
     }
   ) => void;
 
   updateElement: (roomId: RoomId, point: Point) => void;
+  updateTextElement: (roomId: RoomId, id: string, text: string) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
-  
   canvases: {},
   color: '#000000',
   strokeColor: undefined,
   strokeWidth: 2,
   opacity: 1,
   tool: 'Pencil',
+  text: '',
 
   setColor: (color) => set({ color }),
   setStrokeColor: (strokeColor) => set({ strokeColor }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
   setOpacity: (opacity) => set({ opacity }),
   setTool: (tool) => set({ tool }),
+  setText: (text) => set({ text }),
 
   startElement: (roomId, point, options) => {
     const state = get();
@@ -91,6 +103,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     const strokeColor = options?.strokeColor ?? state.strokeColor ?? color;
     const strokeWidth = options?.strokeWidth ?? state.strokeWidth;
     const opacity = options?.opacity ?? state.opacity;
+    const text = options?.text ?? state.text;
 
     let newElement: CanvasElement;
 
@@ -120,6 +133,20 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           opacity,
           center: point,
           radius: 0,
+        };
+        break;
+
+      case 'Text':
+        newElement = {
+          id,
+          type: 'text',
+          tool,
+          color,
+          strokeColor,
+          strokeWidth,
+          opacity,
+          point,
+          text, 
         };
         break;
 
@@ -166,12 +193,30 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         updated = { ...last, radius };
         break;
       }
+      default:
+        return;
     }
 
     set({
       canvases: {
         ...canvases,
         [roomId]: [...elements.slice(0, -1), updated],
+      },
+    });
+  },
+
+  updateTextElement: (roomId, id, newText) => {
+    const canvases = get().canvases;
+    const elements = canvases[roomId] || [];
+
+    const updated = elements.map((el) =>
+      el.id === id && el.type === 'text' ? { ...el, text: newText } : el
+    );
+
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: updated,
       },
     });
   },

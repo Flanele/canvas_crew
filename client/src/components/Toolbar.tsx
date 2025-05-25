@@ -27,7 +27,7 @@ export const ToolBar = () => {
         <ColorPicker />
       </div>
 
-      {(tool === "Circle" || tool === "Rect") && (
+      {(tool === "Circle" || tool === "Rect" || tool === 'Text') && (
         <div className="flex flex-col gap-2">
           <p className="text-xs">Stroke color:</p>
           <StrokeColorPicker />
