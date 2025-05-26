@@ -15,6 +15,12 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const [textPos, setTextPos] = React.useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [showTextarea, setShowTextarea] = React.useState(false);
 
   const color = useCanvasStore((s) => s.color);
   const strokeColor = useCanvasStore((s) => s.strokeColor);
@@ -64,7 +70,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
         tool,
         text,
       });
-    };    
+    };
 
     const handleMove = ({
       roomId: incomingRoomId,
@@ -77,58 +83,40 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       updateElement(incomingRoomId, point);
     };
 
-    socket.on('start-line', handleStart);
-    socket.on('draw-line', handleMove);
+    socket.on("start-line", handleStart);
+    socket.on("draw-line", handleMove);
 
     return () => {
-      socket.off('start-line', handleStart);
-      socket.off('draw-line', handleMove);
+      socket.off("start-line", handleStart);
+      socket.off("draw-line", handleMove);
     };
   }, [roomId]);
 
   const handleMouseDown = () => {
+    if (showTextarea) return;
+
     const stage = stageRef.current;
     if (!stage) return;
     const pos = stage.getPointerPosition();
     if (!pos) return;
-  
+
     const x = pos.x / scale;
     const y = pos.y / scale;
     const id = nanoid();
     const finalStrokeColor = strokeColor || color;
-  
-    if (tool === 'Text') {
-      const input = prompt('Enter text:');
-      if (!input) return;
-  
-      startElement(roomId, [x, y], {
-        id,
-        color,
-        strokeColor: finalStrokeColor,
-        strokeWidth,
-        opacity,
-        tool,
-        text: input,
-      });
-  
-      socket.emit('start-line', {
-        roomId,
-        id,
-        point: [x, y],
-        color,
-        strokeColor: finalStrokeColor,
-        strokeWidth,
-        opacity,
-        tool,
-        text: input,
-      });
-  
-      return; // don't start drawing
+
+    if (tool === "Text") {
+      setTextPos({ x, y });
+      setShowTextarea(true);
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
+      return;
     }
-  
+
     // остальные фигуры
     isDrawing.current = true;
-  
+
     startElement(roomId, [x, y], {
       id,
       color,
@@ -137,8 +125,8 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       opacity,
       tool,
     });
-  
-    socket.emit('start-line', {
+
+    socket.emit("start-line", {
       roomId,
       id,
       point: [x, y],
@@ -164,12 +152,61 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
     updateElement(roomId, [x, y]);
 
-    socket.emit('draw-line', { roomId, point: [x, y] });
+    socket.emit("draw-line", { roomId, point: [x, y] });
   };
 
   const handleMouseUp = () => {
     isDrawing.current = false;
   };
+
+  const handleTextSubmit = () => {
+    const value = textareaRef.current?.value.trim();
+    if (!value || !textPos) return;
+
+    const id = nanoid();
+    const finalStrokeColor = strokeColor || color;
+
+    startElement(roomId, [textPos.x, textPos.y], {
+      id,
+      color,
+      strokeColor: finalStrokeColor,
+      strokeWidth,
+      opacity,
+      tool: "Text",
+      text: value,
+    });
+
+    socket.emit("start-line", {
+      roomId,
+      id,
+      point: [textPos.x, textPos.y],
+      color,
+      strokeColor: finalStrokeColor,
+      strokeWidth,
+      opacity,
+      tool: "Text",
+      text: value,
+    });
+
+    setShowTextarea(false);
+    setTextPos(null);
+  };
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleTextSubmit();
+      } else if (e.key === "Escape") {
+        setShowTextarea(false);
+        setTextPos(null);
+      }
+    };
+    if (showTextarea) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showTextarea, textPos]);
 
   React.useEffect(() => {
     const handleMouseUp = () => {
@@ -195,17 +232,11 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     >
       <div
         className="relative"
-        style={{
-          width: WORKSPACE_WIDTH,
-          height: WORKSPACE_HEIGHT,
-        }}
+        style={{ width: WORKSPACE_WIDTH, height: WORKSPACE_HEIGHT }}
       >
         <div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white"
-          style={{
-            width: BASE_WIDTH * scale,
-            height: BASE_HEIGHT * scale,
-          }}
+          className="absolute top-1/2 left-1/2 bg-white -translate-x-1/2 -translate-y-1/2"
+          style={{ width: BASE_WIDTH * scale, height: BASE_HEIGHT * scale }}
         >
           <Stage
             ref={stageRef}
@@ -219,6 +250,30 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
           >
             <CanvasLayer roomId={roomId} />
           </Stage>
+
+          {showTextarea && textPos && (
+            <textarea
+            ref={textareaRef}
+            className={`
+              absolute z-20
+              resize-none overflow-hidden
+              bg-transparent border-none outline-none
+              p-0 m-0 leading-none
+            `}
+            style={{
+              top: `${textPos.y * scale}px`,
+              left: `${textPos.x * scale}px`,
+              fontSize: `${strokeWidth * 4 * scale}px`,
+              color: color,
+              WebkitTextStroke: strokeColor ? `1px ${strokeColor}` : undefined,
+            }}
+            onBlur={() => {
+              handleTextSubmit();
+              setShowTextarea(false);
+              setTextPos(null);
+            }}
+          />
+          )}
         </div>
       </div>
     </div>
