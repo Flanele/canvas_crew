@@ -141,14 +141,42 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("message", { id, text, username, time, type });
   });
 
-  socket.on("start-line", ({ roomId, id, point, color, strokeColor, strokeWidth, opacity, tool, text }) => {
-    socket.to(roomId).emit("start-line", { roomId, id, point, color, strokeColor, strokeWidth, opacity, tool, text });
-  });
-  
+  socket.on(
+    "start-line",
+    ({
+      roomId,
+      id,
+      point,
+      color,
+      strokeColor,
+      strokeWidth,
+      opacity,
+      tool,
+      text,
+    }) => {
+      socket
+        .to(roomId)
+        .emit("start-line", {
+          roomId,
+          id,
+          point,
+          color,
+          strokeColor,
+          strokeWidth,
+          opacity,
+          tool,
+          text,
+        });
+    }
+  );
+
   socket.on("draw-line", ({ roomId, point }) => {
     socket.to(roomId).emit("draw-line", { roomId, point });
-  }); 
-  
+  });
+
+  socket.on("text-change", ({ roomId, id, text }) => {
+    socket.to(roomId).emit("text-change", { roomId, id, text });
+  });
 });
 
 // --- REST API ---

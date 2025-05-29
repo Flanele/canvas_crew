@@ -6,6 +6,8 @@ import { Tool, useCanvasStore } from "../store/canvas";
 import socket from "../socket/socket";
 import { CanvasLayer } from "./CanvasLayer";
 import { nanoid } from "nanoid";
+import { useTextInput } from "../hooks/useTextInput";
+import { TextInputOverlay } from "./TextInputOverlay";
 
 interface Props {
   roomId: string;
@@ -15,12 +17,6 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-  const [textPos, setTextPos] = React.useState<{ x: number; y: number } | null>(
-    null
-  );
-  const [showTextarea, setShowTextarea] = React.useState(false);
 
   const color = useCanvasStore((s) => s.color);
   const strokeColor = useCanvasStore((s) => s.strokeColor);
@@ -29,7 +25,26 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const tool = useCanvasStore((s) => s.tool);
 
   const startElement = useCanvasStore((s) => s.startElement);
+  const updateTextElement = useCanvasStore((s) => s.updateTextElement);
   const updateElement = useCanvasStore((s) => s.updateElement);
+  const {
+    textareaRef,
+    textPos,
+    showTextarea,
+    handleStartText,
+    handleOnTextChange,
+    handleTextSubmit,
+    setShowTextarea,
+    setTextPos,
+  } = useTextInput({
+    roomId,
+    color,
+    strokeColor,
+    strokeWidth,
+    opacity,
+    startElement,
+    updateTextElement,
+  });
 
   const { scale, handleWheel } = useZoom(stageRef);
 
@@ -83,12 +98,19 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       updateElement(incomingRoomId, point);
     };
 
+    const handleTextChange = ({ roomId: incomingRoomId, id, text }: { roomId: string; id: string; text: string }) => {
+      if (incomingRoomId !== roomId) return;
+      updateTextElement(incomingRoomId, id, text);
+    };
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
+    socket.on("text-change", handleTextChange);
 
     return () => {
       socket.off("start-line", handleStart);
       socket.off("draw-line", handleMove);
+      socket.off("text-change", handleTextChange);
     };
   }, [roomId]);
 
@@ -106,12 +128,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     const finalStrokeColor = strokeColor || color;
 
     if (tool === "Text") {
-      setTextPos({ x, y });
-      setShowTextarea(true);
-      setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 0);
-      return;
+      handleStartText(x, y);
     }
 
     // остальные фигуры
@@ -159,55 +176,6 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     isDrawing.current = false;
   };
 
-  const handleTextSubmit = () => {
-    const value = textareaRef.current?.value.trim();
-    if (!value || !textPos) return;
-
-    const id = nanoid();
-    const finalStrokeColor = strokeColor || color;
-
-    startElement(roomId, [textPos.x, textPos.y], {
-      id,
-      color,
-      strokeColor: finalStrokeColor,
-      strokeWidth,
-      opacity,
-      tool: "Text",
-      text: value,
-    });
-
-    socket.emit("start-line", {
-      roomId,
-      id,
-      point: [textPos.x, textPos.y],
-      color,
-      strokeColor: finalStrokeColor,
-      strokeWidth,
-      opacity,
-      tool: "Text",
-      text: value,
-    });
-
-    setShowTextarea(false);
-    setTextPos(null);
-  };
-
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleTextSubmit();
-      } else if (e.key === "Escape") {
-        setShowTextarea(false);
-        setTextPos(null);
-      }
-    };
-    if (showTextarea) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showTextarea, textPos]);
-
   React.useEffect(() => {
     const handleMouseUp = () => {
       isDrawing.current = false;
@@ -252,27 +220,21 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
           </Stage>
 
           {showTextarea && textPos && (
-            <textarea
-            ref={textareaRef}
-            className={`
-              absolute z-20
-              resize-none overflow-hidden
-              bg-transparent border-none outline-none
-              p-0 m-0 leading-none
-            `}
-            style={{
-              top: `${textPos.y * scale}px`,
-              left: `${textPos.x * scale}px`,
-              fontSize: `${strokeWidth * 4 * scale}px`,
-              color: color,
-              WebkitTextStroke: strokeColor ? `1px ${strokeColor}` : undefined,
-            }}
-            onBlur={() => {
-              handleTextSubmit();
-              setShowTextarea(false);
-              setTextPos(null);
-            }}
-          />
+            <TextInputOverlay
+              textareaRef={textareaRef}
+              x={textPos.x}
+              y={textPos.y}
+              scale={scale}
+              strokeWidth={strokeWidth}
+              color={color}
+              strokeColor={strokeColor}
+              onChange={handleOnTextChange}
+              onBlur={() => {
+                handleTextSubmit();
+                setShowTextarea(false);
+                setTextPos(null);
+              }}
+            />
           )}
         </div>
       </div>
