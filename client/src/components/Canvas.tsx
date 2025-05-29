@@ -17,6 +17,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const [drawingId, setDrawingId] = React.useState<string | null>(null);
 
   const color = useCanvasStore((s) => s.color);
   const strokeColor = useCanvasStore((s) => s.strokeColor);
@@ -89,16 +90,26 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
     const handleMove = ({
       roomId: incomingRoomId,
+      id,
       point,
     }: {
       roomId: string;
+      id: string;
       point: [number, number];
     }) => {
       if (incomingRoomId !== roomId) return;
-      updateElement(incomingRoomId, point);
+      updateElement(incomingRoomId, id, point);
     };
 
-    const handleTextChange = ({ roomId: incomingRoomId, id, text }: { roomId: string; id: string; text: string }) => {
+    const handleTextChange = ({
+      roomId: incomingRoomId,
+      id,
+      text,
+    }: {
+      roomId: string;
+      id: string;
+      text: string;
+    }) => {
       if (incomingRoomId !== roomId) return;
       updateTextElement(incomingRoomId, id, text);
     };
@@ -125,6 +136,8 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     const x = pos.x / scale;
     const y = pos.y / scale;
     const id = nanoid();
+    setDrawingId(id);
+
     const finalStrokeColor = strokeColor || color;
 
     if (tool === "Text") {
@@ -167,18 +180,22 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     const x = pos.x / scale;
     const y = pos.y / scale;
 
-    updateElement(roomId, [x, y]);
-
-    socket.emit("draw-line", { roomId, point: [x, y] });
+    if (drawingId) {
+      updateElement(roomId, drawingId, [x, y]);
+  
+      socket.emit("draw-line", { roomId, id: drawingId, point: [x, y] });
+    }
   };
 
   const handleMouseUp = () => {
     isDrawing.current = false;
+    setDrawingId(null);
   };
 
   React.useEffect(() => {
     const handleMouseUp = () => {
       isDrawing.current = false;
+      setDrawingId(null);
     };
     window.addEventListener("mouseup", handleMouseUp);
     return () => window.removeEventListener("mouseup", handleMouseUp);

@@ -4,7 +4,15 @@ import { nanoid } from "nanoid";
 type Point = [number, number];
 type RoomId = string;
 
-export type Tool = 'Pencil' | 'Brush' | 'Eraser' | 'Marker' | 'Rect' | 'Circle' | 'Text' | 'Select';
+export type Tool =
+  | "Pencil"
+  | "Brush"
+  | "Eraser"
+  | "Marker"
+  | "Rect"
+  | "Circle"
+  | "Text"
+  | "Select";
 
 interface BaseShape {
   id: string;
@@ -15,26 +23,26 @@ interface BaseShape {
 }
 
 interface LineShape extends BaseShape {
-  type: 'line';
+  type: "line";
   points: Point[];
 }
 
 interface RectShape extends BaseShape {
-  type: 'rect';
+  type: "rect";
   start: Point;
   end: Point;
   strokeColor: string;
 }
 
 interface CircleShape extends BaseShape {
-  type: 'circle';
+  type: "circle";
   center: Point;
   radius: number;
   strokeColor: string;
 }
 
 interface TextShape extends BaseShape {
-  type: 'text';
+  type: "text";
   point: Point;
   text: string;
   strokeColor: string;
@@ -72,19 +80,19 @@ interface CanvasStore {
     }
   ) => void;
 
-  updateElement: (roomId: RoomId, point: Point) => void;
+  updateElement: (roomId: RoomId, id: string, point: Point) => void;
   updateTextElement: (roomId: RoomId, id: string, text: string) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
   canvases: {},
-  color: '#000000',
+  color: "#000000",
   strokeColor: undefined,
   strokeWidth: 2,
   opacity: 1,
-  tool: 'Pencil',
-  text: '',
+  tool: "Pencil",
+  text: "",
 
   setColor: (color) => set({ color }),
   setStrokeColor: (strokeColor) => set({ strokeColor }),
@@ -108,10 +116,10 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     let newElement: CanvasElement;
 
     switch (tool) {
-      case 'Rect':
+      case "Rect":
         newElement = {
           id,
-          type: 'rect',
+          type: "rect",
           tool,
           color,
           strokeColor,
@@ -122,10 +130,10 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         };
         break;
 
-      case 'Circle':
+      case "Circle":
         newElement = {
           id,
-          type: 'circle',
+          type: "circle",
           tool,
           color,
           strokeColor,
@@ -136,24 +144,24 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         };
         break;
 
-      case 'Text':
+      case "Text":
         newElement = {
           id,
-          type: 'text',
+          type: "text",
           tool,
           color,
           strokeColor,
           strokeWidth,
           opacity,
           point,
-          text, 
+          text,
         };
         break;
 
       default:
         newElement = {
           id,
-          type: 'line',
+          type: "line",
           tool,
           color,
           strokeWidth,
@@ -171,36 +179,31 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     });
   },
 
-  updateElement: (roomId, point) => {
+  updateElement: (roomId, id, point) => {
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];
-    const last = elements[elements.length - 1];
-    if (!last) return;
 
-    let updated: CanvasElement;
+    const updated = elements.map((el) => {
+      if (el.id !== id) return el;
 
-    switch (last.type) {
-      case 'line':
-        updated = { ...last, points: [...last.points, point] };
-        break;
-      case 'rect':
-        updated = { ...last, end: point };
-        break;
-      case 'circle': {
-        const dx = point[0] - last.center[0];
-        const dy = point[1] - last.center[1];
+      if (el.type === "line") {
+        return { ...el, points: [...el.points, point] };
+      } else if (el.type === "rect") {
+        return { ...el, end: point };
+      } else if (el.type === "circle") {
+        const dx = point[0] - el.center[0];
+        const dy = point[1] - el.center[1];
         const radius = Math.sqrt(dx * dx + dy * dy);
-        updated = { ...last, radius };
-        break;
+        return { ...el, radius };
       }
-      default:
-        return;
-    }
+
+      return el;
+    });
 
     set({
       canvases: {
         ...canvases,
-        [roomId]: [...elements.slice(0, -1), updated],
+        [roomId]: updated,
       },
     });
   },
@@ -210,7 +213,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     const elements = canvases[roomId] || [];
 
     const updated = elements.map((el) =>
-      el.id === id && el.type === 'text' ? { ...el, text: newText } : el
+      el.id === id && el.type === "text" ? { ...el, text: newText } : el
     );
 
     set({

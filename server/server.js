@@ -170,8 +170,8 @@ io.on("connection", (socket) => {
     }
   );
 
-  socket.on("draw-line", ({ roomId, point }) => {
-    socket.to(roomId).emit("draw-line", { roomId, point });
+  socket.on("draw-line", ({ roomId, id, point }) => {
+    socket.to(roomId).emit("draw-line", { roomId, id, point });
   });
 
   socket.on("text-change", ({ roomId, id, text }) => {
