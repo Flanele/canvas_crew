@@ -17,7 +17,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [drawingId, setDrawingId] = React.useState<string | null>(null);
+  const drawingIdRef = React.useRef<string | null>(null);
 
   const color = useCanvasStore((s) => s.color);
   const strokeColor = useCanvasStore((s) => s.strokeColor);
@@ -33,7 +33,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     textPos,
     showTextarea,
     handleStartText,
-    handleOnTextChange,
+    handleOnTextInput,
     handleTextSubmit,
     setShowTextarea,
     setTextPos,
@@ -136,7 +136,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     const x = pos.x / scale;
     const y = pos.y / scale;
     const id = nanoid();
-    setDrawingId(id);
+    drawingIdRef.current = id;
 
     const finalStrokeColor = strokeColor || color;
 
@@ -172,30 +172,30 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     if (!isDrawing.current) return;
 
     const stage = stageRef.current;
-    if (!stage) return;
-
-    const pos = stage.getPointerPosition();
-    if (!pos) return;
+    const pos = stage?.getPointerPosition();
+    if (!stage || !pos || !drawingIdRef.current) return;
 
     const x = pos.x / scale;
     const y = pos.y / scale;
 
-    if (drawingId) {
-      updateElement(roomId, drawingId, [x, y]);
-  
-      socket.emit("draw-line", { roomId, id: drawingId, point: [x, y] });
-    }
+    updateElement(roomId, drawingIdRef.current, [x, y]);
+
+    socket.emit("draw-line", {
+      roomId,
+      id: drawingIdRef.current,
+      point: [x, y],
+    });
   };
 
   const handleMouseUp = () => {
     isDrawing.current = false;
-    setDrawingId(null);
+    drawingIdRef.current = null;
   };
 
   React.useEffect(() => {
     const handleMouseUp = () => {
       isDrawing.current = false;
-      setDrawingId(null);
+      drawingIdRef.current = null;
     };
     window.addEventListener("mouseup", handleMouseUp);
     return () => window.removeEventListener("mouseup", handleMouseUp);
@@ -233,7 +233,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
             onMouseUp={handleMouseUp}
             onWheel={handleWheel}
           >
-            <CanvasLayer roomId={roomId} />
+            <CanvasLayer roomId={roomId} BASE_WIDTH={BASE_WIDTH} scale={scale} />
           </Stage>
 
           {showTextarea && textPos && (
@@ -245,7 +245,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
               strokeWidth={strokeWidth}
               color={color}
               strokeColor={strokeColor}
-              onChange={handleOnTextChange}
+              onInput={handleOnTextInput}
               onBlur={() => {
                 handleTextSubmit();
                 setShowTextarea(false);

@@ -1,14 +1,14 @@
 import React from "react";
 
 type Props = {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  textareaRef: React.RefObject<HTMLDivElement | null>;
   x: number;
   y: number;
   scale: number;
   strokeWidth: number;
   color: string;
   strokeColor?: string;
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onInput: (e: React.FormEvent<HTMLDivElement>) => void;
   onBlur: () => void;
 };
 
@@ -19,28 +19,33 @@ export const TextInputOverlay: React.FC<Props> = ({
   scale,
   strokeWidth,
   color,
-  strokeColor,
-  onChange,
+  onInput,
   onBlur,
 }) => {
+  const fontSize = strokeWidth * 4 * scale;
+  const lineHeight = fontSize * 1.2;
+
   return (
-    <textarea
+    <div
       ref={textareaRef}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={onInput}
+      onBlur={onBlur}
       className={`
         absolute z-20
-        resize-none overflow-hidden
-        bg-transparent border-none outline-none
-        p-0 m-0 leading-none
+        whitespace-pre-wrap break-words
+        bg-transparent outline-none border-none
+        p-0 m-0
       `}
       style={{
         top: `${y * scale}px`,
         left: `${x * scale}px`,
-        fontSize: `${strokeWidth * 4 * scale}px`,
-        color,
-        WebkitTextStroke: strokeColor ? `1px ${strokeColor}` : undefined,
+        fontSize: `${fontSize}px`,
+        lineHeight: `${lineHeight}px`,
+        color: 'transparent',
+        caretColor: color,
       }}
-      onChange={onChange}
-      onBlur={onBlur}
     />
   );
 };

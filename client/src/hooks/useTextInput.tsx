@@ -19,7 +19,8 @@ export const useTextInput = ({
   startElement: Function;
   updateTextElement: Function;
 }) => {
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const textareaRef = React.useRef<HTMLDivElement>(null);
+
   const [textPos, setTextPos] = React.useState<{ x: number; y: number } | null>(
     null
   );
@@ -61,7 +62,7 @@ export const useTextInput = ({
   };
 
   const handleTextSubmit = () => {
-    const value = textareaRef.current?.value.trim();
+    const value = textareaRef.current?.innerText.trim();
     if (!value || !textPos) return;
 
     updateTextElement(roomId, editingId, value);
@@ -77,8 +78,8 @@ export const useTextInput = ({
     setEditingId(null);
   };
 
-  const handleOnTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
+  const handleOnTextInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const value = (e.currentTarget as HTMLDivElement).innerText;
     if (!editingId) return;
 
     updateTextElement(roomId, editingId, value);
@@ -89,6 +90,7 @@ export const useTextInput = ({
       text: value,
     });
   };
+
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -111,7 +113,7 @@ export const useTextInput = ({
     textPos,
     showTextarea,
     handleStartText,
-    handleOnTextChange,
+    handleOnTextInput,
     handleTextSubmit,
     setShowTextarea,
     setTextPos,
