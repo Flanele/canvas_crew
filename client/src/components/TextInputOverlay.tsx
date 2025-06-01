@@ -24,6 +24,7 @@ export const TextInputOverlay: React.FC<Props> = ({
 }) => {
   const fontSize = strokeWidth * 4 * scale;
   const lineHeight = fontSize * 1.2;
+  
 
   return (
     <div
@@ -36,7 +37,7 @@ export const TextInputOverlay: React.FC<Props> = ({
         absolute z-20
         whitespace-pre-wrap break-words
         bg-transparent outline-none border-none
-        p-0 m-0
+        p-0 pl-[1px] m-0
       `}
       style={{
         top: `${y * scale}px`,

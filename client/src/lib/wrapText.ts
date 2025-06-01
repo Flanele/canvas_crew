@@ -13,14 +13,38 @@ export const wrapText = (
   let line = "";
 
   for (let word of words) {
-    const testLine = line ? line + " " + word : word;
-    const width = context.measureText(testLine).width;
+    const testLine = line ? `${line} ${word}` : word;
+    const testWidth = context.measureText(testLine).width;
 
-    if (width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-    } else {
+    if (testWidth <= maxWidth) {
       line = testLine;
+    } else {
+      // если само слово длиннее maxWidth, разбиваем его
+      const wordWidth = context.measureText(word).width;
+      if (wordWidth > maxWidth) {
+        if (line) {
+          lines.push(line);
+          line = "";
+        }
+
+        let subWord = "";
+        for (const char of word) {
+          const testSub = subWord + char;
+          if (context.measureText(testSub).width > maxWidth) {
+            lines.push(subWord);
+            subWord = char;
+          } else {
+            subWord = testSub;
+          }
+        }
+
+        if (subWord) {
+          line = subWord;
+        }
+      } else {
+        if (line) lines.push(line);
+        line = word;
+      }
     }
   }
 

@@ -28,6 +28,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const startElement = useCanvasStore((s) => s.startElement);
   const updateTextElement = useCanvasStore((s) => s.updateTextElement);
   const updateElement = useCanvasStore((s) => s.updateElement);
+  const updateElementPosition = useCanvasStore((s) => s.updateElementPosition);
   const {
     textareaRef,
     textPos,
@@ -114,19 +115,35 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       updateTextElement(incomingRoomId, id, text);
     };
 
+    const handleMoveElement = ({
+      roomId: incomingRoomId,
+      id,
+      point,
+    }: {
+      roomId: string;
+      id: string;
+      point: [number, number];
+    }) => {
+      if (incomingRoomId !== roomId) return;
+      updateElementPosition(roomId, id, point);
+    };
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
     socket.on("text-change", handleTextChange);
+    socket.on("move-element", handleMoveElement);
 
     return () => {
       socket.off("start-line", handleStart);
       socket.off("draw-line", handleMove);
       socket.off("text-change", handleTextChange);
+      socket.off("move-element", handleMoveElement);
     };
   }, [roomId]);
 
   const handleMouseDown = () => {
     if (showTextarea) return;
+    if (tool === "Select") return;
 
     const stage = stageRef.current;
     if (!stage) return;
@@ -170,6 +187,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
   const handleMouseMove = () => {
     if (!isDrawing.current) return;
+    if (tool === "Select") return;
 
     const stage = stageRef.current;
     const pos = stage?.getPointerPosition();
@@ -233,7 +251,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
             onMouseUp={handleMouseUp}
             onWheel={handleWheel}
           >
-            <CanvasLayer roomId={roomId} BASE_WIDTH={BASE_WIDTH} scale={scale} />
+            <CanvasLayer roomId={roomId} BASE_WIDTH={BASE_WIDTH} />
           </Stage>
 
           {showTextarea && textPos && (

@@ -58,6 +58,7 @@ interface CanvasStore {
   opacity: number;
   tool: Tool;
   text: string;
+  selectedElementId: string | null;
 
   setColor: (color: string) => void;
   setStrokeColor: (strokeColor: string) => void;
@@ -65,6 +66,7 @@ interface CanvasStore {
   setOpacity: (opacity: number) => void;
   setTool: (tool: Tool) => void;
   setText: (text: string) => void;
+  setSelectedElement: (id: string | null) => void;
 
   startElement: (
     roomId: RoomId,
@@ -82,6 +84,7 @@ interface CanvasStore {
 
   updateElement: (roomId: RoomId, id: string, point: Point) => void;
   updateTextElement: (roomId: RoomId, id: string, text: string) => void;
+  updateElementPosition: (roomId: RoomId, id: string, pos: Point) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
 
@@ -93,6 +96,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   opacity: 1,
   tool: "Pencil",
   text: "",
+  selectedElementId: null,
 
   setColor: (color) => set({ color }),
   setStrokeColor: (strokeColor) => set({ strokeColor }),
@@ -100,6 +104,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setOpacity: (opacity) => set({ opacity }),
   setTool: (tool) => set({ tool }),
   setText: (text) => set({ text }),
+  setSelectedElement: (selectedElementId) => set({ selectedElementId }),
 
   startElement: (roomId, point, options) => {
     const state = get();
@@ -215,6 +220,50 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     const updated = elements.map((el) =>
       el.id === id && el.type === "text" ? { ...el, text: newText } : el
     );
+
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: updated,
+      },
+    });
+  },
+
+  updateElementPosition: (roomId, id, pos) => {
+    const canvases = get().canvases;
+    const elements = canvases[roomId] || [];
+
+    const updated = elements.map((el) => {
+      if (el.id !== id) return el;
+
+      if (el.type === "rect") {
+        const width = Math.abs(el.end[0] - el.start[0]);
+        const height = Math.abs(el.end[1] - el.start[1]);
+        return {
+          ...el,
+          start: [pos[0], pos[1]] as Point,
+          end: [pos[0] + width, pos[1] + height] as Point,
+        };
+      }
+
+      if (el.type === "circle") {
+        return { ...el, center: [pos[0], pos[1]] as Point };
+      }
+
+      if (el.type === "text") {
+        return { ...el, point: [pos[0], pos[1]] as Point };
+      }
+
+      if (el.type === "line") {
+        // Сдвинуть все точки
+        const dx = pos[0] - el.points[0][0];
+        const dy = pos[1] - el.points[0][1];
+        const newPoints = el.points.map(([x, y]) => [x + dx, y + dy] as Point);
+        return { ...el, points: newPoints };
+      }
+  
+      return el;
+    });
 
     set({
       canvases: {

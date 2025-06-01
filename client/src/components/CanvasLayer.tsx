@@ -3,18 +3,21 @@ import { useCanvasStore } from "../store/canvas";
 import React from "react";
 import { LineConfig } from "konva/lib/shapes/Line";
 import { wrapText } from "../lib/wrapText";
+import { renderDraggable } from "../lib/utils/konva/renderDraggble";
+import socket from "../socket/socket";
 
 interface Props {
   roomId: string;
   BASE_WIDTH: number;
-  scale: number;
 }
 
-export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
+export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
   const elements =
     useCanvasStore(
       React.useCallback((state) => state.canvases[roomId], [roomId])
     ) || [];
+  const tool = useCanvasStore((state) => state.tool);
+  const updatePosition = useCanvasStore((state) => state.updateElementPosition);
 
   return (
     <Layer>
@@ -29,6 +32,22 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
             lineJoin: "round",
           }),
         };
+
+        const draggableWrapper = (child: React.ReactNode) =>
+          renderDraggable({
+            tool,
+            element: el,
+            onDragMove: (pos) => {
+              updatePosition(roomId, el.id, [pos.x, pos.y]);
+
+              socket.emit("move-element", {
+                roomId,
+                id: el.id,
+                point: [pos.x, pos.y],
+              });
+            },
+            children: child,
+          });
 
         switch (el.type) {
           case "line": {
@@ -62,7 +81,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
               };
             }
 
-            return (
+            const line = (
               <Line
                 key={el.id}
                 points={el.points.flat()}
@@ -74,6 +93,8 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
                 }
               />
             );
+
+            return draggableWrapper(line);
           }
 
           case "rect": {
@@ -82,7 +103,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
             const width = Math.abs(el.end[0] - el.start[0]);
             const height = Math.abs(el.end[1] - el.start[1]);
 
-            return (
+            const rect = (
               <Rect
                 key={el.id}
                 x={x}
@@ -94,10 +115,12 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
                 {...commonStyle}
               />
             );
+
+            return draggableWrapper(rect);
           }
 
           case "circle": {
-            return (
+            const circle = (
               <Circle
                 key={el.id}
                 x={el.center[0]}
@@ -108,16 +131,18 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
                 {...commonStyle}
               />
             );
+
+            return draggableWrapper(circle);
           }
 
           case "text": {
             const fontSize = el.strokeWidth * 4;
             const padding = 10;
-            const maxWidth = BASE_WIDTH / scale - el.point[0] - padding;
+            const maxWidth = BASE_WIDTH - el.point[0] - padding;
             const lineHeight = fontSize * 1.2;
             const lines = wrapText(el.text, maxWidth, fontSize);
 
-            return (
+            const text = (
               <Group key={el.id}>
                 {lines.map((line, idx) => (
                   <Text
@@ -135,6 +160,8 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH, scale }) => {
                 ))}
               </Group>
             );
+
+            return draggableWrapper(text);
           }
 
           default:

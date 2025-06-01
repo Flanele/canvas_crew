@@ -154,19 +154,17 @@ io.on("connection", (socket) => {
       tool,
       text,
     }) => {
-      socket
-        .to(roomId)
-        .emit("start-line", {
-          roomId,
-          id,
-          point,
-          color,
-          strokeColor,
-          strokeWidth,
-          opacity,
-          tool,
-          text,
-        });
+      socket.to(roomId).emit("start-line", {
+        roomId,
+        id,
+        point,
+        color,
+        strokeColor,
+        strokeWidth,
+        opacity,
+        tool,
+        text,
+      });
     }
   );
 
@@ -176,6 +174,10 @@ io.on("connection", (socket) => {
 
   socket.on("text-change", ({ roomId, id, text }) => {
     socket.to(roomId).emit("text-change", { roomId, id, text });
+  });
+
+  socket.on("move-element", ({ roomId, id, point }) => {
+    socket.to(roomId).emit("move-element", { roomId, id, point });
   });
 });
 
