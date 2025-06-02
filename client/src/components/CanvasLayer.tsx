@@ -1,10 +1,11 @@
-import { Circle, Group, Layer, Line, Rect, Text } from "react-konva";
+import { Circle, Group, Layer, Rect, Text } from "react-konva";
 import { useCanvasStore } from "../store/canvas";
 import React from "react";
 import { LineConfig } from "konva/lib/shapes/Line";
 import { wrapText } from "../lib/wrapText";
-import { renderDraggable } from "../lib/utils/konva/renderDraggble";
 import socket from "../socket/socket";
+import { makeDraggableProps } from "../lib/makeDraggbleProps";
+import { DraggableLine } from "./DraggbleLine";
 
 interface Props {
   roomId: string;
@@ -32,22 +33,6 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
             lineJoin: "round",
           }),
         };
-
-        const draggableWrapper = (child: React.ReactNode) =>
-          renderDraggable({
-            tool,
-            element: el,
-            onDragMove: (pos) => {
-              updatePosition(roomId, el.id, [pos.x, pos.y]);
-
-              socket.emit("move-element", {
-                roomId,
-                id: el.id,
-                point: [pos.x, pos.y],
-              });
-            },
-            children: child,
-          });
 
         switch (el.type) {
           case "line": {
@@ -81,20 +66,17 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
               };
             }
 
-            const line = (
-              <Line
+            return (
+              <DraggableLine
                 key={el.id}
-                points={el.points.flat()}
-                {...style}
-                globalCompositeOperation={
-                  el.tool === "Eraser"
-                    ? "destination-out"
-                    : style.globalCompositeOperation || "source-over"
-                }
+                el={el}
+                tool={tool}
+                updatePosition={updatePosition}
+                roomId={roomId}
+                socket={socket}
+                style={style}
               />
             );
-
-            return draggableWrapper(line);
           }
 
           case "rect": {
@@ -103,7 +85,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
             const width = Math.abs(el.end[0] - el.start[0]);
             const height = Math.abs(el.end[1] - el.start[1]);
 
-            const rect = (
+            return (
               <Rect
                 key={el.id}
                 x={x}
@@ -113,14 +95,19 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
                 fill={el.color}
                 stroke={el.strokeColor}
                 {...commonStyle}
+                {...makeDraggableProps({
+                  tool,
+                  element: el,
+                  updatePosition,
+                  roomId,
+                  socket,
+                })}
               />
             );
-
-            return draggableWrapper(rect);
           }
 
           case "circle": {
-            const circle = (
+            return (
               <Circle
                 key={el.id}
                 x={el.center[0]}
@@ -129,10 +116,15 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
                 fill={el.color}
                 stroke={el.strokeColor}
                 {...commonStyle}
+                {...makeDraggableProps({
+                  tool,
+                  element: el,
+                  updatePosition,
+                  roomId,
+                  socket,
+                })}
               />
             );
-
-            return draggableWrapper(circle);
           }
 
           case "text": {
@@ -142,7 +134,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
             const lineHeight = fontSize * 1.2;
             const lines = wrapText(el.text, maxWidth, fontSize);
 
-            const text = (
+            return (
               <Group key={el.id}>
                 {lines.map((line, idx) => (
                   <Text
@@ -156,12 +148,17 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
                     stroke={el.strokeColor}
                     strokeWidth={1}
                     fontFamily="Calibri"
+                    {...makeDraggableProps({
+                      tool,
+                      element: el,
+                      updatePosition,
+                      roomId,
+                      socket,
+                    })}
                   />
                 ))}
               </Group>
             );
-
-            return draggableWrapper(text);
           }
 
           default:
