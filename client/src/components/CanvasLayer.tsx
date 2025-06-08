@@ -4,8 +4,8 @@ import React from "react";
 import { LineConfig } from "konva/lib/shapes/Line";
 import { wrapText } from "../lib/wrapText";
 import socket from "../socket/socket";
-import { makeDraggableProps } from "../lib/makeDraggbleProps";
 import { DraggableLine } from "./DraggbleLine";
+import { MaskedDraggableGroup } from "./MaskedDraggableGroup";
 
 interface Props {
   roomId: string;
@@ -80,50 +80,57 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
           }
 
           case "rect": {
-            const x = Math.min(el.start[0], el.end[0]);
-            const y = Math.min(el.start[1], el.end[1]);
             const width = Math.abs(el.end[0] - el.start[0]);
             const height = Math.abs(el.end[1] - el.start[1]);
-
             return (
-              <Rect
+              <MaskedDraggableGroup
                 key={el.id}
-                x={x}
-                y={y}
-                width={width}
-                height={height}
-                fill={el.color}
-                stroke={el.strokeColor}
-                {...commonStyle}
-                {...makeDraggableProps({
-                  tool,
-                  element: el,
-                  updatePosition,
-                  roomId,
-                  socket,
-                })}
-              />
+                id={el.id}
+                mask={el.mask}
+                position={el.start}
+                tool={tool}
+                draggable={tool === "Select" && el.tool !== "Eraser"}
+                updatePosition={updatePosition}
+                roomId={roomId}
+                socket={socket}
+              >
+                <Rect
+                  x={0}
+                  y={0}
+                  id={el.id}
+                  width={width}
+                  height={height}
+                  fill={el.color}
+                  stroke={el.strokeColor}
+                  {...commonStyle}
+                />
+              </MaskedDraggableGroup>
             );
           }
 
           case "circle": {
             return (
-              <Circle
+              <MaskedDraggableGroup
                 key={el.id}
-                x={el.center[0]}
-                y={el.center[1]}
-                radius={el.radius}
-                fill={el.color}
-                stroke={el.strokeColor}
-                {...commonStyle}
-                {...makeDraggableProps({
-                  tool,
-                  element: el,
-                  updatePosition,
-                  roomId,
-                  socket,
-                })}
-              />
+                id={el.id}
+                mask={el.mask}
+                position={el.center} // передаем центр круга
+                tool={tool}
+                draggable={tool === "Select" && el.tool !== "Eraser"}
+                updatePosition={updatePosition}
+                roomId={roomId}
+                socket={socket}
+              >
+                <Circle
+                  x={0}
+                  y={0}
+                  id={el.id}
+                  radius={el.radius}
+                  fill={el.color}
+                  stroke={el.strokeColor}
+                  {...commonStyle}
+                />
+              </MaskedDraggableGroup>
             );
           }
 
@@ -135,29 +142,35 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
             const lines = wrapText(el.text, maxWidth, fontSize);
 
             return (
-              <Group key={el.id}>
-                {lines.map((line, idx) => (
-                  <Text
-                    key={line + idx}
-                    x={el.point[0]}
-                    y={el.point[1] + idx * lineHeight}
-                    text={line}
-                    fontSize={fontSize}
-                    fill={el.color}
-                    opacity={el.opacity}
-                    stroke={el.strokeColor}
-                    strokeWidth={1}
-                    fontFamily="Calibri"
-                    {...makeDraggableProps({
-                      tool,
-                      element: el,
-                      updatePosition,
-                      roomId,
-                      socket,
-                    })}
-                  />
-                ))}
-              </Group>
+              <MaskedDraggableGroup
+                key={el.id}
+                id={el.id}
+                mask={el.mask}
+                position={el.point}
+                tool={tool}
+                draggable={tool === "Select" && el.tool !== "Eraser"}
+                updatePosition={updatePosition}
+                roomId={roomId}
+                socket={socket}
+              >
+                <Group>
+                  {lines.map((line, idx) => (
+                    <Text
+                      key={line + idx}
+                      id={el.id}
+                      x={0} // для каждой строки устанавливаем x = 0 относительно группы
+                      y={idx * lineHeight} // высота каждой строки
+                      text={line}
+                      fontSize={fontSize}
+                      fill={el.color}
+                      opacity={el.opacity}
+                      stroke={el.strokeColor}
+                      strokeWidth={1}
+                      fontFamily="Calibri"
+                    />
+                  ))}
+                </Group>
+              </MaskedDraggableGroup>
             );
           }
 

@@ -22,26 +22,35 @@ interface BaseShape {
   opacity: number;
 }
 
-interface LineShape extends BaseShape {
+export interface Mask {
+  id: string;
+  lines: Point[][];
+}
+
+interface MaskedShape {
+  mask?: Mask;
+}
+
+interface LineShape extends BaseShape, MaskedShape {
   type: "line";
   points: Point[];
 }
 
-interface RectShape extends BaseShape {
+interface RectShape extends BaseShape, MaskedShape {
   type: "rect";
   start: Point;
   end: Point;
   strokeColor: string;
 }
 
-interface CircleShape extends BaseShape {
+interface CircleShape extends BaseShape, MaskedShape {
   type: "circle";
   center: Point;
   radius: number;
   strokeColor: string;
 }
 
-interface TextShape extends BaseShape {
+interface TextShape extends BaseShape, MaskedShape {
   type: "text";
   point: Point;
   text: string;
@@ -85,6 +94,11 @@ interface CanvasStore {
   updateElement: (roomId: RoomId, id: string, point: Point) => void;
   updateTextElement: (roomId: RoomId, id: string, text: string) => void;
   updateElementPosition: (roomId: RoomId, id: string, pos: Point) => void;
+  applyMaskToElement: (
+    roomId: RoomId,
+    elementId: string,
+    eraserLines: Point[][]
+  ) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
 
@@ -261,7 +275,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         const newPoints = el.points.map(([x, y]) => [x + dx, y + dy] as Point);
         return { ...el, points: newPoints };
       }
-  
+
       return el;
     });
 
@@ -272,6 +286,45 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       },
     });
   },
+
+  applyMaskToElement: (roomId, elementId, eraserLines) => {
+    const canvases = get().canvases;
+    const elements = canvases[roomId] || [];
+    const updated = elements.map((el) => {
+      if (el.id !== elementId) return el;
+  
+      // вычисляем оффсет для правильной локализации маски:
+      let offset: [number, number] = [0, 0];
+      if (el.type === "rect") offset = el.start;
+      if (el.type === "circle") offset = el.center;
+      if (el.type === "text") offset = el.point;
+  
+      // смещаем линии маски в локальные координаты фигуры:
+      const maskLines = eraserLines.map(line =>
+        line.map(([x, y]) => [x - offset[0], y - offset[1]] as [number, number])
+      );
+  
+      const newMask: Mask = {
+        id: nanoid(),
+        lines: maskLines,
+      };
+  
+      return {
+        ...el,
+        mask: el.mask
+          ? { ...el.mask, lines: [...el.mask.lines, ...maskLines] }
+          : newMask,
+      };
+    });
+  
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: updated,
+      },
+    });
+  },
+  
 
   resetCanvas: (roomId) => {
     const canvases = get().canvases;

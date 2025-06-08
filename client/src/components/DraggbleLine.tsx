@@ -1,7 +1,7 @@
 import { Socket } from "socket.io-client";
 import { CanvasElement } from "../store/canvas";
 import { LineConfig } from "konva/lib/shapes/Line";
-import { Line } from "react-konva";
+import { Group, Line } from "react-konva";
 import { KonvaEventObject } from "konva/lib/Node";
 type Point = [number, number];
 
@@ -29,21 +29,17 @@ export const DraggableLine: React.FC<Props> = ({
 
   // Относительные точки — Line будет рисоваться от (0,0)
   const relativePoints = el.points.map(([x, y]) => [x - offsetX, y - offsetY]);
-
   const flatPoints = relativePoints.flat();
 
   return (
-    <Line
+    <Group
+      id={el.id}
       x={offsetX}
       y={offsetY}
-      points={flatPoints}
-      {...style}
       draggable={isDraggable}
       onDragMove={(e: KonvaEventObject<DragEvent>) => {
         const { x, y } = e.target.position();
-
         updatePosition(roomId, el.id, [x, y]);
-
         socket.emit("move-element", {
           roomId,
           id: el.id,
@@ -62,6 +58,24 @@ export const DraggableLine: React.FC<Props> = ({
           stage.container().style.cursor = "default";
         }
       }}
-    />
+    >
+      {/* Основная линия */}
+      <Line id={el.id} points={flatPoints} {...style} />
+
+      {/* Маска-ластик для линии */}
+      {el.mask?.lines.map((line, idx) => (
+        <Line
+          key={`mask-${idx}`}
+          points={line
+            .map(([x, y]) => [x - offsetX, y - offsetY]) // делаем их локальными относительно группы!
+            .flat()}
+          stroke="red"
+          strokeWidth={el.strokeWidth}
+          globalCompositeOperation="destination-out"
+          lineCap="round"
+          lineJoin="round"
+        />
+      ))}
+    </Group>
   );
 };

@@ -15,7 +15,7 @@ export const makeDraggableProps = ({
     roomId: string;
     socket: Socket;
   }) => {
-    const isDraggable = tool === "Select" && element.tool !== "Eraser";
+    const isDraggable = tool === "Select";
   
     return {
       draggable: isDraggable,

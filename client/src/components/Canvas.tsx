@@ -13,11 +13,15 @@ interface Props {
   roomId: string;
 }
 
+type Point = [number, number];
+
 export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
   const stageRef = React.useRef<Konva.Stage>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const drawingIdRef = React.useRef<string | null>(null);
+  const eraserLinesRef = React.useRef<Point[][]>([]);
+  const targetElementIdRef = React.useRef<string | null>(null);
 
   const color = useCanvasStore((s) => s.color);
   const strokeColor = useCanvasStore((s) => s.strokeColor);
@@ -29,6 +33,8 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const updateTextElement = useCanvasStore((s) => s.updateTextElement);
   const updateElement = useCanvasStore((s) => s.updateElement);
   const updateElementPosition = useCanvasStore((s) => s.updateElementPosition);
+  const applyMaskToElement = useCanvasStore((s) => s.applyMaskToElement);
+
   const {
     textareaRef,
     textPos,
@@ -164,6 +170,17 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     // остальные фигуры
     isDrawing.current = true;
 
+    if (tool === "Eraser") {
+      eraserLinesRef.current = [[[x, y]]];
+
+      // Определяем фигуру под указателем
+      const shape = stage.getIntersection(pos);
+      if (shape) {
+        const elementId = shape.id();
+        targetElementIdRef.current = elementId;
+      }
+    }
+
     startElement(roomId, [x, y], {
       id,
       color,
@@ -196,6 +213,15 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     const x = pos.x / scale;
     const y = pos.y / scale;
 
+    console.log("DEBUG:");
+    console.log("tool:", tool);
+    console.log("targetElementIdRef:", targetElementIdRef.current);
+    console.log("eraserLinesRef:", eraserLinesRef.current);
+
+    if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
+      eraserLinesRef.current[eraserLinesRef.current.length - 1].push([x, y]);
+    }
+
     updateElement(roomId, drawingIdRef.current, [x, y]);
 
     socket.emit("draw-line", {
@@ -205,19 +231,34 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     });
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = React.useCallback(() => {
+    if (
+      tool === "Eraser" &&
+      targetElementIdRef.current &&
+      eraserLinesRef.current.length > 0
+    ) {
+      console.log(
+        ">> APPLYING MASK",
+        targetElementIdRef.current,
+        eraserLinesRef.current
+      );
+      applyMaskToElement(
+        roomId,
+        targetElementIdRef.current,
+        eraserLinesRef.current
+      );
+      eraserLinesRef.current = [];
+      targetElementIdRef.current = null;
+    }
+
     isDrawing.current = false;
     drawingIdRef.current = null;
-  };
+  }, [tool, roomId, applyMaskToElement]);
 
   React.useEffect(() => {
-    const handleMouseUp = () => {
-      isDrawing.current = false;
-      drawingIdRef.current = null;
-    };
     window.addEventListener("mouseup", handleMouseUp);
     return () => window.removeEventListener("mouseup", handleMouseUp);
-  }, []);
+  }, [handleMouseUp]);
 
   // Scroll to center on mount
   React.useEffect(() => {
