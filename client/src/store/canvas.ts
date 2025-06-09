@@ -24,11 +24,16 @@ interface BaseShape {
 
 export interface Mask {
   id: string;
-  lines: Point[][];
+  lines: MaskLine[];
 }
 
 interface MaskedShape {
   mask?: Mask;
+}
+
+export interface MaskLine {
+  points: Point[];
+  strokeWidth: number;
 }
 
 interface LineShape extends BaseShape, MaskedShape {
@@ -97,7 +102,8 @@ interface CanvasStore {
   applyMaskToElement: (
     roomId: RoomId,
     elementId: string,
-    eraserLines: Point[][]
+    eraserLines: Point[][],
+    strokeWidths: number[]
   ) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
@@ -287,28 +293,36 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     });
   },
 
-  applyMaskToElement: (roomId, elementId, eraserLines) => {
+  applyMaskToElement: (
+    roomId,
+    elementId,
+    eraserLines, 
+    strokeWidths 
+  ) => {
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];
     const updated = elements.map((el) => {
       if (el.id !== elementId) return el;
-  
+
       // вычисляем оффсет для правильной локализации маски:
       let offset: [number, number] = [0, 0];
       if (el.type === "rect") offset = el.start;
       if (el.type === "circle") offset = el.center;
       if (el.type === "text") offset = el.point;
-  
-      // смещаем линии маски в локальные координаты фигуры:
-      const maskLines = eraserLines.map(line =>
-        line.map(([x, y]) => [x - offset[0], y - offset[1]] as [number, number])
-      );
-  
+      if (el.type === "line" && el.points.length > 0) offset = el.points[0];
+
+      const maskLines: MaskLine[] = eraserLines.map((line, idx) => ({
+        points: line.map(
+          ([x, y]) => [x - offset[0], y - offset[1]] as [number, number]
+        ),
+        strokeWidth: strokeWidths[idx] ?? 2
+      }));
+
       const newMask: Mask = {
         id: nanoid(),
         lines: maskLines,
       };
-  
+
       return {
         ...el,
         mask: el.mask
@@ -316,7 +330,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           : newMask,
       };
     });
-  
+
     set({
       canvases: {
         ...canvases,
@@ -324,7 +338,6 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       },
     });
   },
-  
 
   resetCanvas: (roomId) => {
     const canvases = get().canvases;

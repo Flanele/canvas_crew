@@ -66,11 +66,9 @@ export const DraggableLine: React.FC<Props> = ({
       {el.mask?.lines.map((line, idx) => (
         <Line
           key={`mask-${idx}`}
-          points={line
-            .map(([x, y]) => [x - offsetX, y - offsetY]) // делаем их локальными относительно группы!
-            .flat()}
+          points={line.points.flat()}
           stroke="red"
-          strokeWidth={el.strokeWidth}
+          strokeWidth={line.strokeWidth}
           globalCompositeOperation="destination-out"
           lineCap="round"
           lineJoin="round"

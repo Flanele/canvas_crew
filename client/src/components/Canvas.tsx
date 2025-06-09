@@ -8,6 +8,7 @@ import { CanvasLayer } from "./CanvasLayer";
 import { nanoid } from "nanoid";
 import { useTextInput } from "../hooks/useTextInput";
 import { TextInputOverlay } from "./TextInputOverlay";
+import { hitTestLine } from "../lib/hitTestLine";
 
 interface Props {
   roomId: string;
@@ -21,6 +22,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const drawingIdRef = React.useRef<string | null>(null);
   const eraserLinesRef = React.useRef<Point[][]>([]);
+  const eraserStrokeWidthsRef= React.useRef<number[]>([]);
   const targetElementIdRef = React.useRef<string | null>(null);
 
   const color = useCanvasStore((s) => s.color);
@@ -162,6 +164,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     drawingIdRef.current = id;
 
     const finalStrokeColor = strokeColor || color;
+    const elements = useCanvasStore.getState().canvases[roomId] || [];
 
     if (tool === "Text") {
       handleStartText(x, y);
@@ -172,12 +175,25 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
     if (tool === "Eraser") {
       eraserLinesRef.current = [[[x, y]]];
+      eraserStrokeWidthsRef.current = [strokeWidth];
 
       // Определяем фигуру под указателем
       const shape = stage.getIntersection(pos);
       if (shape) {
         const elementId = shape.id();
         targetElementIdRef.current = elementId;
+      } else {
+        // Ручная проверка линий:
+        for (const el of elements) {
+          if (el.type === "line") {
+            if (
+              hitTestLine([x, y], el.points, Math.max(10, el.strokeWidth))
+            ) {
+              targetElementIdRef.current = el.id;
+              break;
+            }
+          }
+        }
       }
     }
 
@@ -245,7 +261,8 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
       applyMaskToElement(
         roomId,
         targetElementIdRef.current,
-        eraserLinesRef.current
+        eraserLinesRef.current,
+        eraserStrokeWidthsRef?.current
       );
       eraserLinesRef.current = [];
       targetElementIdRef.current = null;

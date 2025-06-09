@@ -63,6 +63,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
               style = {
                 ...style,
                 globalCompositeOperation: "destination-out",
+                opacity: 1
               };
             }
 
