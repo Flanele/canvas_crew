@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 import { ToolIcon } from "./ToolIcon";
 import { StrokeSettingsPanel } from "./StrokeSettingsPanel";
-import { useCanvasStore } from "../store/canvas";
 import { StrokeColorPicker } from "./StrokeColorPicker";
+import { useSetTool, useTool } from "../store/selectors/canvasSelectors";
 
 export const ToolBar = () => {
-  const setTool = useCanvasStore((state) => state.setTool);
-  const tool = useCanvasStore((state) => state.tool);
+  const setTool = useSetTool();
+  const tool = useTool();
 
   return (
     <div className="bg-[#D7DBD4] flex flex-col gap-10 h-full p-4">

@@ -179,6 +179,15 @@ io.on("connection", (socket) => {
   socket.on("move-element", ({ roomId, id, point }) => {
     socket.to(roomId).emit("move-element", { roomId, id, point });
   });
+
+  socket.on(
+    "apply-mask",
+    ({ roomId, elementId, eraserLines, strokeWidths }) => {
+      socket
+        .to(roomId)
+        .emit("apply-mask", { roomId, elementId, eraserLines, strokeWidths });
+    }
+  );
 });
 
 // --- REST API ---

@@ -1,24 +1,22 @@
 import { Circle, Group, Layer, Rect, Text } from "react-konva";
-import { useCanvasStore } from "../store/canvas";
 import React from "react";
 import { LineConfig } from "konva/lib/shapes/Line";
 import { wrapText } from "../lib/wrapText";
 import socket from "../socket/socket";
 import { DraggableLine } from "./DraggbleLine";
 import { MaskedDraggableGroup } from "./MaskedDraggableGroup";
+import {  useCanvasElements, useTool, useUpdateElementPosition } from "../store/selectors/canvasSelectors";
 
 interface Props {
   roomId: string;
   BASE_WIDTH: number;
 }
 
+
 export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
-  const elements =
-    useCanvasStore(
-      React.useCallback((state) => state.canvases[roomId], [roomId])
-    ) || [];
-  const tool = useCanvasStore((state) => state.tool);
-  const updatePosition = useCanvasStore((state) => state.updateElementPosition);
+  const elements = useCanvasElements(roomId);
+  const tool = useTool();
+  const updatePosition = useUpdateElementPosition();
 
   return (
     <Layer>

@@ -1,4 +1,4 @@
-import { useCanvasStore } from "../store/canvas";
+import { useTool } from "../store/selectors/canvasSelectors";
 
 interface ToolIconProps {
   icon: React.ReactNode;
@@ -7,9 +7,8 @@ interface ToolIconProps {
 }
 
 export const ToolIcon = ({ icon, label, onClick }: ToolIconProps) => {
-  const tool = useCanvasStore((state) => state.tool);
+  const tool = useTool();
   const active = tool == label;
-
 
   return (
     <button
@@ -24,4 +23,3 @@ export const ToolIcon = ({ icon, label, onClick }: ToolIconProps) => {
     </button>
   );
 };
-  

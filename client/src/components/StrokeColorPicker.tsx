@@ -1,9 +1,9 @@
 import { SliderPicker } from "react-color";
-import { useCanvasStore } from "../store/canvas";
+import { useSetStrokeColor, useStrokeColor } from "../store/selectors/canvasSelectors";
 
 export const StrokeColorPicker = () => {
-  const strokeColor = useCanvasStore((state) => state.strokeColor);
-  const setStrokeColor = useCanvasStore((state) => state.setStrokeColor);
+  const strokeColor = useStrokeColor();
+  const setStrokeColor = useSetStrokeColor();
 
   return (
     <SliderPicker

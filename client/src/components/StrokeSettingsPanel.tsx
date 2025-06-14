@@ -1,12 +1,19 @@
-import { useCanvasStore } from "../store/canvas";
+import {
+  useOpacity,
+  useSetOpacity,
+  useSetStrokeWidth,
+  useStrokeWidth,
+} from "../store/selectors/canvasSelectors";
 
 export const StrokeSettingsPanel = () => {
-  const strokeWidth = useCanvasStore((state) => state.strokeWidth);
-  const setStrokeWidth = useCanvasStore((state) => state.setStrokeWidth);
-  const opacity = useCanvasStore((state) => state.opacity);
-  const setOpacity = useCanvasStore((state) => state.setOpacity);
+  const strokeWidth = useStrokeWidth();
+  const setStrokeWidth = useSetStrokeWidth();
+  const opacity = useOpacity();
+  const setOpacity = useSetOpacity();
 
-  const strokeWidthOptions = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 30, 40];
+  const strokeWidthOptions = [
+    1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 30, 40,
+  ];
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const index = Number(e.target.value);
@@ -45,7 +52,9 @@ export const StrokeSettingsPanel = () => {
           step={0.1}
           defaultValue={opacity}
           className="w-full accent-green-800 cursor-pointer"
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOpacity(Number(e.target.value))}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setOpacity(Number(e.target.value))
+          }
         />
       </div>
     </div>

@@ -1,68 +1,7 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-
-type Point = [number, number];
-type RoomId = string;
-
-export type Tool =
-  | "Pencil"
-  | "Brush"
-  | "Eraser"
-  | "Marker"
-  | "Rect"
-  | "Circle"
-  | "Text"
-  | "Select";
-
-interface BaseShape {
-  id: string;
-  tool: Tool;
-  color: string;
-  strokeWidth: number;
-  opacity: number;
-}
-
-export interface Mask {
-  id: string;
-  lines: MaskLine[];
-}
-
-interface MaskedShape {
-  mask?: Mask;
-}
-
-export interface MaskLine {
-  points: Point[];
-  strokeWidth: number;
-}
-
-interface LineShape extends BaseShape, MaskedShape {
-  type: "line";
-  points: Point[];
-}
-
-interface RectShape extends BaseShape, MaskedShape {
-  type: "rect";
-  start: Point;
-  end: Point;
-  strokeColor: string;
-}
-
-interface CircleShape extends BaseShape, MaskedShape {
-  type: "circle";
-  center: Point;
-  radius: number;
-  strokeColor: string;
-}
-
-interface TextShape extends BaseShape, MaskedShape {
-  type: "text";
-  point: Point;
-  text: string;
-  strokeColor: string;
-}
-
-export type CanvasElement = LineShape | RectShape | CircleShape | TextShape;
+import { CanvasElement, Point, RoomId, Tool } from "./types/canvas";
+import { applyMaskHelper, updateElementPositionHelper } from "../lib/utils/canvas";
 
 interface CanvasStore {
   canvases: Record<RoomId, CanvasElement[]>;
@@ -252,91 +191,19 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   updateElementPosition: (roomId, id, pos) => {
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];
-
-    const updated = elements.map((el) => {
-      if (el.id !== id) return el;
-
-      if (el.type === "rect") {
-        const width = Math.abs(el.end[0] - el.start[0]);
-        const height = Math.abs(el.end[1] - el.start[1]);
-        return {
-          ...el,
-          start: [pos[0], pos[1]] as Point,
-          end: [pos[0] + width, pos[1] + height] as Point,
-        };
-      }
-
-      if (el.type === "circle") {
-        return { ...el, center: [pos[0], pos[1]] as Point };
-      }
-
-      if (el.type === "text") {
-        return { ...el, point: [pos[0], pos[1]] as Point };
-      }
-
-      if (el.type === "line") {
-        // Сдвинуть все точки
-        const dx = pos[0] - el.points[0][0];
-        const dy = pos[1] - el.points[0][1];
-        const newPoints = el.points.map(([x, y]) => [x + dx, y + dy] as Point);
-        return { ...el, points: newPoints };
-      }
-
-      return el;
-    });
-
-    set({
-      canvases: {
-        ...canvases,
-        [roomId]: updated,
-      },
-    });
+    const updated = elements.map((el) =>
+      el.id !== id ? el : updateElementPositionHelper(el, pos)
+    );
+    set({ canvases: { ...canvases, [roomId]: updated } });
   },
 
-  applyMaskToElement: (
-    roomId,
-    elementId,
-    eraserLines, 
-    strokeWidths 
-  ) => {
+  applyMaskToElement: (roomId, elementId, eraserLines, strokeWidths) => {
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];
-    const updated = elements.map((el) => {
-      if (el.id !== elementId) return el;
-
-      // вычисляем оффсет для правильной локализации маски:
-      let offset: [number, number] = [0, 0];
-      if (el.type === "rect") offset = el.start;
-      if (el.type === "circle") offset = el.center;
-      if (el.type === "text") offset = el.point;
-      if (el.type === "line" && el.points.length > 0) offset = el.points[0];
-
-      const maskLines: MaskLine[] = eraserLines.map((line, idx) => ({
-        points: line.map(
-          ([x, y]) => [x - offset[0], y - offset[1]] as [number, number]
-        ),
-        strokeWidth: strokeWidths[idx] ?? 2
-      }));
-
-      const newMask: Mask = {
-        id: nanoid(),
-        lines: maskLines,
-      };
-
-      return {
-        ...el,
-        mask: el.mask
-          ? { ...el.mask, lines: [...el.mask.lines, ...maskLines] }
-          : newMask,
-      };
-    });
-
-    set({
-      canvases: {
-        ...canvases,
-        [roomId]: updated,
-      },
-    });
+    const updated = elements.map((el) =>
+      el.id !== elementId ? el : applyMaskHelper(el, eraserLines, strokeWidths)
+    );
+    set({ canvases: { ...canvases, [roomId]: updated } });
   },
 
   resetCanvas: (roomId) => {

@@ -1,7 +1,7 @@
 import { KonvaEventObject } from "konva/lib/Node";
 import { Group, Line } from "react-konva";
-import { Mask } from "../store/canvas";
 import { Socket } from "socket.io-client";
+import { Mask } from "../store/types/canvas";
 
 type Point = [number, number];
 

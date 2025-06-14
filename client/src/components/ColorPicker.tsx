@@ -1,9 +1,15 @@
 import { HexColorPicker } from "react-colorful";
-import { useCanvasStore } from "../store/canvas";
+import { useColor, useSetColor } from "../store/selectors/canvasSelectors";
 
 export const ColorPicker = () => {
-  const color = useCanvasStore((state) => state.color);
-  const setColor = useCanvasStore((state) => state.setColor);
+  const color = useColor();
+  const setColor = useSetColor();
 
-  return <HexColorPicker color={color} onChange={setColor} style={{ cursor: 'pointer' }} />;
+  return (
+    <HexColorPicker
+      color={color}
+      onChange={setColor}
+      style={{ cursor: "pointer" }}
+    />
+  );
 };

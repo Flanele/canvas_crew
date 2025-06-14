@@ -1,8 +1,8 @@
 import { Socket } from "socket.io-client";
-import { CanvasElement } from "../store/canvas";
 import { LineConfig } from "konva/lib/shapes/Line";
 import { Group, Line } from "react-konva";
 import { KonvaEventObject } from "konva/lib/Node";
+import { CanvasElement } from "../store/types/canvas";
 type Point = [number, number];
 
 interface Props {
