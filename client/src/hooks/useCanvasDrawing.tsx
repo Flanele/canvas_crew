@@ -3,7 +3,6 @@ import { useCanvasStore } from "../store/canvas";
 import { nanoid } from "nanoid";
 import socket from "../socket/socket";
 import Konva from "konva";
-import { hitTestLine } from "../lib/hitTestLine";
 import { Point } from "../store/types/canvas";
 import {
   useApplyMaskToElement,
@@ -16,6 +15,7 @@ import {
   useTool,
   useUpdateElement,
 } from "../store/selectors/canvasSelectors";
+import { hitTestEraser } from "../lib/hitTestEraser";
 
 interface ReturnProps {
   handleMouseDown: () => void;
@@ -30,7 +30,6 @@ interface UseCanvasDrawingArgs {
   drawingIdRef: React.RefObject<string | null>;
   eraserLinesRef: React.RefObject<Point[][]>;
   eraserStrokeWidthsRef: React.RefObject<number[]>;
-  targetElementIdRef: React.RefObject<string | null>;
   isDrawing: React.RefObject<boolean>;
   showTextarea: boolean;
   handleStartText: (x: number, y: number) => void;
@@ -43,7 +42,6 @@ export const useCanvasDrawing = ({
   drawingIdRef,
   eraserLinesRef,
   eraserStrokeWidthsRef,
-  targetElementIdRef,
   isDrawing,
   showTextarea,
   handleStartText,
@@ -59,6 +57,8 @@ export const useCanvasDrawing = ({
   const applyMaskToElement = useApplyMaskToElement();
   const removeElement = useRemoveElement();
 
+  const targetElementIdsRef = React.useRef<string[]>([]);
+
   const handleMouseDown = () => {
     if (showTextarea) return;
     if (tool === "Select") return;
@@ -72,9 +72,9 @@ export const useCanvasDrawing = ({
     const y = pos.y / scale;
     const id = nanoid();
     drawingIdRef.current = id;
+    targetElementIdsRef.current = [];
 
     const finalStrokeColor = strokeColor || color;
-    const elements = useCanvasStore.getState().canvases[roomId] || [];
     const isTemp = tool === "Eraser";
 
     if (tool === "Text") {
@@ -87,23 +87,6 @@ export const useCanvasDrawing = ({
     if (tool === "Eraser") {
       eraserLinesRef.current = [[[x, y]]];
       eraserStrokeWidthsRef.current = [strokeWidth];
-
-      // Определяем фигуру под указателем
-      const shape = stage.getIntersection(pos);
-      if (shape) {
-        const elementId = shape.id();
-        targetElementIdRef.current = elementId;
-      } else {
-        // Ручная проверка линий:
-        for (const el of elements) {
-          if (el.type === "line") {
-            if (hitTestLine([x, y], el.points, Math.max(10, el.strokeWidth))) {
-              targetElementIdRef.current = el.id;
-              break;
-            }
-          }
-        }
-      }
     }
 
     startElement(roomId, [x, y], {
@@ -132,54 +115,62 @@ export const useCanvasDrawing = ({
   const handleMouseMove = () => {
     if (!isDrawing.current) return;
     if (tool === "Select") return;
-
+  
     const stage = stageRef.current;
     const pos = stage?.getPointerPosition();
     if (!stage || !pos || !drawingIdRef.current) return;
-
+  
     const x = pos.x / scale;
     const y = pos.y / scale;
-
-    console.log("DEBUG:");
-    console.log("tool:", tool);
-    console.log("targetElementIdRef:", targetElementIdRef.current);
-    console.log("eraserLinesRef:", eraserLinesRef.current);
-
+  
     if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
       eraserLinesRef.current[eraserLinesRef.current.length - 1].push([x, y]);
+      
+      // Проверяем, какие элементы задеты ластиком
+      const elements = useCanvasStore.getState().canvases[roomId] || [];
+      const eraserPoints = eraserLinesRef.current.flat(); // все точки текущей линии ластика
+  
+      elements.forEach((el) => {
+        // Не добавляем временные линии и уже отмеченные элементы
+        if (el.type === 'line' && el.isTemp) return;
+        if (targetElementIdsRef.current.includes(el.id)) return;
+  
+        if (hitTestEraser(eraserPoints, el)) {
+          targetElementIdsRef.current.push(el.id);
+        }
+      });
     }
-
+  
     updateElement(roomId, drawingIdRef.current, [x, y]);
-
+  
     socket.emit("draw-line", {
       roomId,
       id: drawingIdRef.current,
       point: [x, y],
     });
   };
+  
 
   const handleMouseUp = React.useCallback(() => {
     let tempLineId = drawingIdRef.current;
   
-    if (
-      tool === "Eraser" &&
-      eraserLinesRef.current.length > 0
-    ) {
-      if (targetElementIdRef.current) {
+    if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
+      // Применяем маску ко всем задетым элементам
+      for (const targetId of targetElementIdsRef.current) {
         applyMaskToElement(
           roomId,
-          targetElementIdRef.current,
+          targetId,
           eraserLinesRef.current,
           eraserStrokeWidthsRef?.current
         );
         socket.emit("apply-mask", {
           roomId,
-          elementId: targetElementIdRef.current,
+          elementId: targetId,
           eraserLines: eraserLinesRef.current,
           strokeWidths: eraserStrokeWidthsRef.current,
         });
       }
-
+  
       if (tempLineId) {
         removeElement(roomId, tempLineId);
         socket.emit("remove-element", {
@@ -187,13 +178,15 @@ export const useCanvasDrawing = ({
           id: tempLineId,
         });
       }
+  
       eraserLinesRef.current = [];
-      targetElementIdRef.current = null;
+      targetElementIdsRef.current = [];
     }
   
     isDrawing.current = false;
     drawingIdRef.current = null;
   }, [tool, roomId, applyMaskToElement]);
+  
   
   return {
     handleMouseDown,

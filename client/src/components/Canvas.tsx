@@ -22,7 +22,6 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   const drawingIdRef = React.useRef<string | null>(null);
   const eraserLinesRef = React.useRef<Point[][]>([]);
   const eraserStrokeWidthsRef = React.useRef<number[]>([]);
-  const targetElementIdRef = React.useRef<string | null>(null);
 
   const color = useColor();
   const strokeColor = useStrokeColor();
@@ -60,7 +59,6 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
     drawingIdRef,
     eraserLinesRef,
     eraserStrokeWidthsRef,
-    targetElementIdRef,
     isDrawing,
     showTextarea,
     handleStartText,
