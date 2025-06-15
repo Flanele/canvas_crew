@@ -188,6 +188,10 @@ io.on("connection", (socket) => {
         .emit("apply-mask", { roomId, elementId, eraserLines, strokeWidths });
     }
   );
+
+  socket.on("remove-element", ({ roomId, id }) => {
+    socket.to(roomId).emit("remove-element", { roomId, elementId: id });
+  });
 });
 
 // --- REST API ---

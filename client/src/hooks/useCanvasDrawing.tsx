@@ -9,6 +9,7 @@ import {
   useApplyMaskToElement,
   useColor,
   useOpacity,
+  useRemoveElement,
   useStartElement,
   useStrokeColor,
   useStrokeWidth,
@@ -56,6 +57,7 @@ export const useCanvasDrawing = ({
   const startElement = useStartElement();
   const updateElement = useUpdateElement();
   const applyMaskToElement = useApplyMaskToElement();
+  const removeElement = useRemoveElement();
 
   const handleMouseDown = () => {
     if (showTextarea) return;
@@ -73,6 +75,7 @@ export const useCanvasDrawing = ({
 
     const finalStrokeColor = strokeColor || color;
     const elements = useCanvasStore.getState().canvases[roomId] || [];
+    const isTemp = tool === "Eraser";
 
     if (tool === "Text") {
       handleStartText(x, y);
@@ -110,6 +113,7 @@ export const useCanvasDrawing = ({
       strokeWidth,
       opacity,
       tool,
+      ...(isTemp ? { isTemp: true } : {}),
     });
 
     socket.emit("start-line", {
@@ -121,6 +125,7 @@ export const useCanvasDrawing = ({
       strokeWidth,
       opacity,
       tool,
+      ...(isTemp ? { isTemp: true } : {}),
     });
   };
 
@@ -154,37 +159,42 @@ export const useCanvasDrawing = ({
   };
 
   const handleMouseUp = React.useCallback(() => {
+    let tempLineId = drawingIdRef.current;
+  
     if (
       tool === "Eraser" &&
-      targetElementIdRef.current &&
       eraserLinesRef.current.length > 0
     ) {
-      console.log(
-        ">> APPLYING MASK",
-        targetElementIdRef.current,
-        eraserLinesRef.current
-      );
-      applyMaskToElement(
-        roomId,
-        targetElementIdRef.current,
-        eraserLinesRef.current,
-        eraserStrokeWidthsRef?.current
-      );
-      socket.emit("apply-mask", {
-        roomId,
-        elementId: targetElementIdRef.current,
-        eraserLines: eraserLinesRef.current,
-        strokeWidths: eraserStrokeWidthsRef.current,
-      });
+      if (targetElementIdRef.current) {
+        applyMaskToElement(
+          roomId,
+          targetElementIdRef.current,
+          eraserLinesRef.current,
+          eraserStrokeWidthsRef?.current
+        );
+        socket.emit("apply-mask", {
+          roomId,
+          elementId: targetElementIdRef.current,
+          eraserLines: eraserLinesRef.current,
+          strokeWidths: eraserStrokeWidthsRef.current,
+        });
+      }
 
+      if (tempLineId) {
+        removeElement(roomId, tempLineId);
+        socket.emit("remove-element", {
+          roomId,
+          id: tempLineId,
+        });
+      }
       eraserLinesRef.current = [];
       targetElementIdRef.current = null;
     }
-
+  
     isDrawing.current = false;
     drawingIdRef.current = null;
   }, [tool, roomId, applyMaskToElement]);
-
+  
   return {
     handleMouseDown,
     handleMouseMove,

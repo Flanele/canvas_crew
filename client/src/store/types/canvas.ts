@@ -33,9 +33,10 @@ export interface MaskLine {
   strokeWidth: number;
 }
 
-interface LineShape extends BaseShape, MaskedShape {
+export interface LineShape extends BaseShape, MaskedShape {
   type: "line";
   points: Point[];
+  isTemp?: boolean
 }
 
 interface RectShape extends BaseShape, MaskedShape {

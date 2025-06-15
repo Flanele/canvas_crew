@@ -34,3 +34,4 @@ export const useUpdateElementPosition = () =>
 export const useApplyMaskToElement = () =>
   useCanvasStore((s) => s.applyMaskToElement);
 export const useResetCanvas = () => useCanvasStore((s) => s.resetCanvas);
+export const useRemoveElement = () => useCanvasStore((s) => s.removeElement);

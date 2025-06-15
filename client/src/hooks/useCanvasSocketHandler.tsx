@@ -3,6 +3,7 @@ import socket from "../socket/socket";
 import { Point, Tool } from "../store/types/canvas";
 import {
   useApplyMaskToElement,
+  useRemoveElement,
   useStartElement,
   useUpdateElement,
   useUpdateElementPosition,
@@ -15,6 +16,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
   const updateElement = useUpdateElement();
   const updateElementPosition = useUpdateElementPosition();
   const applyMaskToElement = useApplyMaskToElement();
+  const removeElement = useRemoveElement();
 
   React.useEffect(() => {
     const handleStart = ({
@@ -104,11 +106,23 @@ export const useCanvasSocketHandler = (roomId: string) => {
       applyMaskToElement(roomId, elementId, eraserLines, strokeWidths);
     };
 
+    const handleRemoveElement = ({
+      roomId: incomingRoomId,
+      elementId,
+    }: {
+      roomId: string;
+      elementId: string;
+    }) => {
+      if (incomingRoomId !== roomId) return;
+      removeElement(roomId, elementId);
+    };
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
     socket.on("text-change", handleTextChange);
     socket.on("move-element", handleMoveElement);
     socket.on("apply-mask", handleApplyMask);
+    socket.on("remove-element", handleRemoveElement);
 
     return () => {
       socket.off("start-line", handleStart);
@@ -116,6 +130,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
       socket.off("text-change", handleTextChange);
       socket.off("move-element", handleMoveElement);
       socket.off("apply-mask", handleApplyMask);
+      socket.off("remove-element", handleRemoveElement);
     };
   }, [roomId]);
 };

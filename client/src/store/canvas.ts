@@ -32,6 +32,7 @@ interface CanvasStore {
       opacity?: number;
       tool?: Tool;
       text?: string;
+      isTemp?: boolean;
     }
   ) => void;
 
@@ -44,6 +45,7 @@ interface CanvasStore {
     eraserLines: Point[][],
     strokeWidths: number[]
   ) => void;
+  removeElement: (roomId: RoomId, id: string) => void;
   resetCanvas: (roomId: RoomId) => void;
 }
 
@@ -76,6 +78,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     const strokeWidth = options?.strokeWidth ?? state.strokeWidth;
     const opacity = options?.opacity ?? state.opacity;
     const text = options?.text ?? state.text;
+    const isTemp = options?.isTemp ?? false;
 
     let newElement: CanvasElement;
 
@@ -131,6 +134,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           strokeWidth,
           opacity,
           points: [point],
+          isTemp
         };
         break;
     }
@@ -204,6 +208,17 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       el.id !== elementId ? el : applyMaskHelper(el, eraserLines, strokeWidths)
     );
     set({ canvases: { ...canvases, [roomId]: updated } });
+  },
+
+  removeElement: (roomId, id) => {
+    const canvases = get().canvases;
+    const elements = canvases[roomId] || [];
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: elements.filter((el) => el.id !== id),
+      },
+    });
   },
 
   resetCanvas: (roomId) => {
