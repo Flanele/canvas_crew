@@ -35,14 +35,9 @@ export function applyMaskHelper(
   eraserLines: Point[][],
   strokeWidths: number[]
 ): CanvasElement {
-  let offset: [number, number] = [0, 0];
-  if (el.type === "rect") offset = el.start;
-  if (el.type === "circle") offset = el.center;
-  if (el.type === "text") offset = el.point;
-  if (el.type === "line" && el.points.length > 0) offset = el.points[0];
 
   const maskLines: MaskLine[] = eraserLines.map((line, idx) => ({
-    points: line.map(([x, y]) => [x - offset[0], y - offset[1]]),
+    points: line,
     strokeWidth: strokeWidths[idx] ?? 2,
   }));
 

@@ -1,8 +1,11 @@
+import React from "react";
 import { Socket } from "socket.io-client";
 import { LineConfig } from "konva/lib/shapes/Line";
-import { Group, Line } from "react-konva";
+import { Group, Image, Line } from "react-konva";
 import { KonvaEventObject } from "konva/lib/Node";
 import { CanvasElement } from "../store/types/canvas";
+import useImage from "use-image";
+import { renderElementToBitmap } from "../lib/renderElementToBitman";
 type Point = [number, number];
 
 interface Props {
@@ -26,16 +29,35 @@ export const DraggableLine: React.FC<Props> = ({
 
   // Абсолютная позиция первой точки
   const [offsetX, offsetY] = el.points[0];
+  const [fixedBitmap, setFixedBitmap] = React.useState<null | {
+    src: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>(null);
 
-  // Относительные точки — Line будет рисоваться от (0,0)
+  React.useEffect(() => {
+    console.log('line points:', el.points);
+
+
+    if (el.mask && el.mask.lines.length > 0) {
+      setFixedBitmap(renderElementToBitmap(el, el.mask.lines));
+    } else {
+      setFixedBitmap(null);
+    }
+    // Подписка только на mask (а не на весь el)
+  }, [el.mask?.lines.length]);
+  const [img] = useImage(fixedBitmap?.src || "");
+
   const relativePoints = el.points.map(([x, y]) => [x - offsetX, y - offsetY]);
   const flatPoints = relativePoints.flat();
 
   return (
     <Group
       id={el.id}
-      x={offsetX}
-      y={offsetY}
+      x={fixedBitmap ? fixedBitmap.x : offsetX}
+      y={fixedBitmap ? fixedBitmap.y : offsetY}
       draggable={isDraggable}
       onDragMove={(e: KonvaEventObject<DragEvent>) => {
         const { x, y } = e.target.position();
@@ -59,21 +81,21 @@ export const DraggableLine: React.FC<Props> = ({
         }
       }}
     >
-      {/* Основная линия */}
-      <Line id={el.id} points={flatPoints} {...style} />
-
-      {/* Маска-ластик для линии */}
-      {el.mask?.lines.map((line, idx) => (
-        <Line
-          key={`mask-${idx}`}
-          points={line.points.flat()}
-          stroke="red"
-          strokeWidth={line.strokeWidth}
-          globalCompositeOperation="destination-out"
-          lineCap="round"
-          lineJoin="round"
+      {/* Если есть маска, рендерим bitmap */}
+      {fixedBitmap ? (
+        <Image
+          key={fixedBitmap.src}
+          image={img}
+          x={0}
+          y={0}
+          width={fixedBitmap.width}
+          height={fixedBitmap.height}
+          opacity={el.opacity}
         />
-      ))}
+      ) : (
+        // Если нет маски, обычная Line
+        <Line id={el.id} points={flatPoints} {...style} />
+      )}
     </Group>
   );
 };

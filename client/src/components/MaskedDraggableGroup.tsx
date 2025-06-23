@@ -52,6 +52,7 @@ export const MaskedDraggableGroup: React.FC<Props> = ({
         const stage = e.target.getStage();
         if (stage) stage.container().style.cursor = "default";
       }}
+      
     >
       {/* Основная фигура */}
       {children}

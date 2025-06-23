@@ -210,6 +210,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     set({ canvases: { ...canvases, [roomId]: updated } });
   },
 
+
   removeElement: (roomId, id) => {
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];

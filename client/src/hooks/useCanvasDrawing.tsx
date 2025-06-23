@@ -157,6 +157,10 @@ export const useCanvasDrawing = ({
     if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
       // Применяем маску ко всем задетым элементам
       for (const targetId of targetElementIdsRef.current) {
+        console.log("eraserLinesRef.current:", JSON.stringify(eraserLinesRef.current));
+        console.log("eraserStrokeWidthsRef.current:", JSON.stringify(eraserStrokeWidthsRef.current));
+        console.log("targetElementIdsRef.current:", targetElementIdsRef.current);
+
         applyMaskToElement(
           roomId,
           targetId,
