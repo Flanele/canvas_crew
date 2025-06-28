@@ -4,30 +4,53 @@ import {
 } from '../../store/types/canvas';
 
 // Перемещение фигуры
+// Перемещение фигуры + её маски
 export function updateElementPositionHelper(el: CanvasElement, pos: Point): CanvasElement {
+  // рассчитываем дельту перемещения
+  const oldOrigin = (() => {
+    if (el.type === "line")    return el.points[0];
+    if (el.type === "rect")    return el.start;
+    if (el.type === "circle")  return el.center;
+    if (el.type === "text")    return el.point;
+    return [0,0] as Point;
+  })();
+  const dx = pos[0] - oldOrigin[0];
+  const dy = pos[1] - oldOrigin[1];
+
+  // 1) Перемещаем саму фигуру
+  let moved: CanvasElement;
   if (el.type === "rect") {
-    const width = Math.abs(el.end[0] - el.start[0]);
-    const height = Math.abs(el.end[1] - el.start[1]);
-    return {
-      ...el,
-      start: [pos[0], pos[1]],
-      end: [pos[0] + width, pos[1] + height],
+    const w = el.end[0] - el.start[0];
+    const h = el.end[1] - el.start[1];
+    moved = { ...el, start: [pos[0], pos[1]], end: [pos[0] + w, pos[1] + h] };
+  } else if (el.type === "circle") {
+    moved = { ...el, center: [pos[0], pos[1]] };
+  } else if (el.type === "text") {
+    moved = { ...el, point: [pos[0], pos[1]] };
+  } else if (el.type === "line") {
+    const newPts = el.points.map(([x, y]) => [x + dx, y + dy] as Point);
+    moved = { ...el, points: newPts };
+  } else {
+    moved = el;
+  }
+
+  // 2) Если у фигуры есть маска — сдвигаем её точно так же
+  if (moved.mask) {
+    moved = {
+      ...moved,
+      mask: {
+        ...moved.mask,
+        lines: moved.mask.lines.map((ln) => ({
+          strokeWidth: ln.strokeWidth,
+          points: ln.points.map(([x, y]) => [x + dx, y + dy] as Point),
+        })),
+      },
     };
   }
-  if (el.type === "circle") {
-    return { ...el, center: [pos[0], pos[1]] };
-  }
-  if (el.type === "text") {
-    return { ...el, point: [pos[0], pos[1]] };
-  }
-  if (el.type === "line") {
-    const dx = pos[0] - el.points[0][0];
-    const dy = pos[1] - el.points[0][1];
-    const newPoints = el.points.map(([x, y]) => [x + dx, y + dy] as Point);
-    return { ...el, points: newPoints };
-  }
-  return el;
+
+  return moved;
 }
+
 
 // Маска
 export function applyMaskHelper(

@@ -27,8 +27,6 @@ export const DraggableLine: React.FC<Props> = ({
 }) => {
   const isDraggable = tool === "Select" && el.tool !== "Eraser";
 
-  // Абсолютная позиция первой точки
-  const [offsetX, offsetY] = el.points[0];
   const [fixedBitmap, setFixedBitmap] = React.useState<null | {
     src: string;
     x: number;
@@ -38,26 +36,31 @@ export const DraggableLine: React.FC<Props> = ({
   }>(null);
 
   React.useEffect(() => {
-    console.log('line points:', el.points);
-
-
     if (el.mask && el.mask.lines.length > 0) {
       setFixedBitmap(renderElementToBitmap(el, el.mask.lines));
     } else {
       setFixedBitmap(null);
     }
-    // Подписка только на mask (а не на весь el)
-  }, [el.mask?.lines.length]);
+  }, [
+    // реагируем и на саму маску
+    el.mask?.lines.length,
+    // и на изменение координат фигуры
+    el.points[0][0],
+    el.points[0][1],
+  ]);
+
   const [img] = useImage(fixedBitmap?.src || "");
 
+  // Абсолютная позиция первой точки
+  const [offsetX, offsetY] = el.points[0];
   const relativePoints = el.points.map(([x, y]) => [x - offsetX, y - offsetY]);
   const flatPoints = relativePoints.flat();
 
   return (
     <Group
       id={el.id}
-      x={fixedBitmap ? fixedBitmap.x : offsetX}
-      y={fixedBitmap ? fixedBitmap.y : offsetY}
+      x={fixedBitmap ? el.points[0][0] : offsetX}
+      y={fixedBitmap ? el.points[0][1] : offsetY}
       draggable={isDraggable}
       onDragMove={(e: KonvaEventObject<DragEvent>) => {
         const { x, y } = e.target.position();
@@ -86,11 +89,11 @@ export const DraggableLine: React.FC<Props> = ({
         <Image
           key={fixedBitmap.src}
           image={img}
-          x={0}
-          y={0}
+          x={fixedBitmap.x - el.points[0][0]}
+          y={fixedBitmap.y - el.points[0][1]}
           width={fixedBitmap.width}
           height={fixedBitmap.height}
-          opacity={el.opacity}
+          opacity={1}  // чтобы после enderElementToBitmap не установилась двойная opacity
         />
       ) : (
         // Если нет маски, обычная Line

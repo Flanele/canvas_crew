@@ -125,7 +125,7 @@ export const useCanvasDrawing = ({
   
     if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
       eraserLinesRef.current[eraserLinesRef.current.length - 1].push([x, y]);
-      
+  
       // Проверяем, какие элементы задеты ластиком
       const elements = useCanvasStore.getState().canvases[roomId] || [];
       const eraserPoints = eraserLinesRef.current.flat(); // все точки текущей линии ластика
@@ -135,7 +135,17 @@ export const useCanvasDrawing = ({
         if (el.type === 'line' && el.isTemp) return;
         if (targetElementIdsRef.current.includes(el.id)) return;
   
+        // ЛОГИРУЕМ ВСЁ ВАЖНОЕ
+        console.log("=== ПРОВЕРЯЕМ ЭЛЕМЕНТ ===");
+        console.log("ID:", el.id, "type:", el.type);
+        if (el.type === "line") {
+          console.log("LINE POINTS:", JSON.stringify(el.points));
+        }
+        console.log("eraserPoints:", JSON.stringify(eraserPoints));
+  
+        // Сама проверка хита
         if (hitTestEraser(eraserPoints, el)) {
+          console.log("===> ХИТ! Добавляем в targetElementIdsRef:", el.id);
           targetElementIdsRef.current.push(el.id);
         }
       });
@@ -149,6 +159,7 @@ export const useCanvasDrawing = ({
       point: [x, y],
     });
   };
+  
   
 
   const handleMouseUp = React.useCallback(() => {

@@ -74,6 +74,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
                 roomId={roomId}
                 socket={socket}
                 style={style}
+                
               />
             );
           }
