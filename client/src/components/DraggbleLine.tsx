@@ -5,12 +5,12 @@ import { Group, Image, Line } from "react-konva";
 import { KonvaEventObject } from "konva/lib/Node";
 import { CanvasElement } from "../store/types/canvas";
 import useImage from "use-image";
-import { renderElementToBitmap } from "../lib/renderElementToBitman";
+import { renderElementToBitmap } from "../lib/renderElementToBitmap";
 type Point = [number, number];
 
 interface Props {
   el: Extract<CanvasElement, { type: "line" }>;
-  tool: string;
+  draggable: boolean;
   updatePosition: (roomId: string, id: string, pos: Point) => void;
   roomId: string;
   socket: Socket;
@@ -19,13 +19,12 @@ interface Props {
 
 export const DraggableLine: React.FC<Props> = ({
   el,
-  tool,
+  draggable,
   updatePosition,
   roomId,
   socket,
   style,
 }) => {
-  const isDraggable = tool === "Select" && el.tool !== "Eraser";
 
   const [fixedBitmap, setFixedBitmap] = React.useState<null | {
     src: string;
@@ -61,7 +60,7 @@ export const DraggableLine: React.FC<Props> = ({
       id={el.id}
       x={fixedBitmap ? el.points[0][0] : offsetX}
       y={fixedBitmap ? el.points[0][1] : offsetY}
-      draggable={isDraggable}
+      draggable={draggable}
       onDragMove={(e: KonvaEventObject<DragEvent>) => {
         const { x, y } = e.target.position();
         updatePosition(roomId, el.id, [x, y]);
@@ -73,7 +72,7 @@ export const DraggableLine: React.FC<Props> = ({
       }}
       onMouseEnter={(e) => {
         const stage = e.target.getStage();
-        if (stage && isDraggable) {
+        if (stage && draggable) {
           stage.container().style.cursor = "pointer";
         }
       }}

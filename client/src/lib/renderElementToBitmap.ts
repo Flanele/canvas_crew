@@ -1,4 +1,6 @@
+import { BASE_WIDTH } from "../components/Canvas";
 import { CanvasElement, MaskLine } from "../store/types/canvas";
+import { wrapText } from "./wrapText";
 
 export interface BitmapResult {
   src: string;
@@ -8,7 +10,10 @@ export interface BitmapResult {
   height: number;
 }
 
-function catmullRomSpline(points: number[][], tension = 0.6, segments = 16): number[][] {
+function catmullRomSpline(
+  points: number[][],
+  segments = 16
+): number[][] {
   if (points.length < 3) return points;
   const result: number[][] = [];
   for (let i = 0; i < points.length - 1; i++) {
@@ -20,22 +25,22 @@ function catmullRomSpline(points: number[][], tension = 0.6, segments = 16): num
       const s = t / segments;
       const s2 = s * s;
       const s3 = s2 * s;
-      const x = 0.5 * (
-        (2 * p1[0]) +
-        (-p0[0] + p2[0]) * s +
-        (2*p0[0] - 5*p1[0] + 4*p2[0] - p3[0]) * s2 +
-        (-p0[0] + 3*p1[0] - 3*p2[0] + p3[0]) * s3
-      );
-      const y = 0.5 * (
-        (2 * p1[1]) +
-        (-p0[1] + p2[1]) * s +
-        (2*p0[1] - 5*p1[1] + 4*p2[1] - p3[1]) * s2 +
-        (-p0[1] + 3*p1[1] - 3*p2[1] + p3[1]) * s3
-      );
+      const x =
+        0.5 *
+        (2 * p1[0] +
+          (-p0[0] + p2[0]) * s +
+          (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * s2 +
+          (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * s3);
+      const y =
+        0.5 *
+        (2 * p1[1] +
+          (-p0[1] + p2[1]) * s +
+          (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * s2 +
+          (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * s3);
       result.push([x, y]);
     }
   }
-  result.push(points[points.length-1]);
+  result.push(points[points.length - 1]);
   return result;
 }
 
@@ -45,6 +50,9 @@ export function renderElementToBitmap(
 ): BitmapResult {
   // bounding box для всего, как раньше
   const allPoints: number[][] = [];
+
+  const scale = window.devicePixelRatio || 1;
+  
   if (el.type === "line") allPoints.push(...el.points);
   if (el.type === "rect") allPoints.push(el.start, el.end);
   if (el.type === "circle") {
@@ -53,8 +61,36 @@ export function renderElementToBitmap(
       [el.center[0] + el.radius, el.center[1] + el.radius]
     );
   }
-  if (el.type === "text") allPoints.push(el.point);
-  eraserMasks.forEach(mask => allPoints.push(...mask.points));
+  if (el.type === "text") {
+    const fontSize = el.strokeWidth * 4; 
+    const padding = 10;
+    const scale = window.devicePixelRatio || 1;
+  
+    // maxWidth для wrapText — тоже умножаем на scale!
+    const maxWidth = (BASE_WIDTH - el.point[0] - padding) * scale;
+    // fontSize для wrapText — умножаем на scale!
+    const lines = wrapText(el.text, maxWidth, fontSize * scale);
+  
+    const lineHeight = fontSize * 1.2 * scale;
+    let maxTextWidth = 0;
+  
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d")!;
+    tempCtx.font = `${fontSize * scale}px Calibri, Arial, sans-serif`;
+  
+    for (const line of lines) {
+      const w = tempCtx.measureText(line).width;
+      if (w > maxTextWidth) maxTextWidth = w;
+    }
+    const textHeight = lineHeight * lines.length;
+    allPoints.push(el.point);
+    allPoints.push([
+      el.point[0] + maxTextWidth / scale,
+      el.point[1] + textHeight / scale,
+    ]);
+  }
+  
+  eraserMasks.forEach((mask) => allPoints.push(...mask.points));
 
   const xs = allPoints.map(([x]) => x);
   const ys = allPoints.map(([, y]) => y);
@@ -67,9 +103,13 @@ export function renderElementToBitmap(
   const height = Math.ceil(maxY - minY);
 
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
   const ctx = canvas.getContext("2d")!;
+  ctx.scale(scale, scale);
 
   ctx.save();
   ctx.translate(-minX, -minY);
@@ -114,8 +154,6 @@ export function renderElementToBitmap(
       ctx.fillStyle = el.color;
       ctx.strokeStyle = el.strokeColor;
       ctx.lineWidth = el.strokeWidth;
-      ctx.globalAlpha = el.opacity;
-      ctx.lineJoin = "round";
       ctx.beginPath();
       const x = el.start[0];
       const y = el.start[1];
@@ -130,7 +168,6 @@ export function renderElementToBitmap(
       ctx.fillStyle = el.color;
       ctx.strokeStyle = el.strokeColor;
       ctx.lineWidth = el.strokeWidth;
-      ctx.globalAlpha = el.opacity;
       ctx.beginPath();
       ctx.arc(el.center[0], el.center[1], el.radius, 0, Math.PI * 2);
       ctx.fill();
@@ -138,16 +175,36 @@ export function renderElementToBitmap(
       break;
     }
     case "text": {
-      ctx.fillStyle = el.color;
-      ctx.strokeStyle = el.strokeColor;
-      ctx.lineWidth = el.strokeWidth;
-      ctx.globalAlpha = el.opacity;
-      ctx.font = `${el.strokeWidth * 4}px Calibri, Arial, sans-serif`;
+      const fontSize = el.strokeWidth * 4 * scale;
+      ctx.font = `${fontSize}px Calibri, Arial, sans-serif`;
       ctx.textBaseline = "top";
-      ctx.fillText(el.text, el.point[0], el.point[1]);
-      ctx.strokeText(el.text, el.point[0], el.point[1]);
+      ctx.globalAlpha = el.opacity;
+      ctx.fillStyle = el.color;
+    
+      // Для многострочности:
+      // !! Тут обязательно те же lines, что и выше, с учётом scale !!
+      const maxWidth = (BASE_WIDTH - el.point[0] - 10) * scale;
+      const lines = wrapText(el.text, maxWidth, fontSize);
+      const lineHeight = fontSize * 1.2;
+    
+      for (let i = 0; i < lines.length; ++i) {
+        ctx.fillText(lines[i], el.point[0], el.point[1] + i * lineHeight);
+    
+        if (
+          el.strokeColor &&
+          el.strokeColor !== el.color &&
+          el.strokeColor !== "transparent"
+        ) {
+          ctx.save();
+          ctx.strokeStyle = el.strokeColor;
+          ctx.lineWidth = 1 * scale; 
+          ctx.strokeText(lines[i], el.point[0], el.point[1] + i * lineHeight);
+          ctx.restore();
+        }
+      }
       break;
     }
+    
   }
 
   // Маска — аккуратно стираем, тоже скруглённо!

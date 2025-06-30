@@ -6,14 +6,14 @@ import socket from "../socket/socket";
 import { DraggableLine } from "./DraggbleLine";
 import { MaskedDraggableGroup } from "./MaskedDraggableGroup";
 import {  useCanvasElements, useTool, useUpdateElementPosition } from "../store/selectors/canvasSelectors";
+import { BASE_WIDTH } from "./Canvas";
 
 interface Props {
   roomId: string;
-  BASE_WIDTH: number;
 }
 
 
-export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
+export const CanvasLayer: React.FC<Props> = ({ roomId }) => {
   const elements = useCanvasElements(roomId);
   const tool = useTool();
   const updatePosition = useUpdateElementPosition();
@@ -69,7 +69,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
               <DraggableLine
                 key={el.id}
                 el={el}
-                tool={tool}
+                draggable={tool === "Select" && el.tool !== "Eraser"}
                 updatePosition={updatePosition}
                 roomId={roomId}
                 socket={socket}
@@ -85,10 +85,10 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
             return (
               <MaskedDraggableGroup
                 key={el.id}
+                el={el}
                 id={el.id}
                 mask={el.mask}
                 position={el.start}
-                tool={tool}
                 draggable={tool === "Select" && el.tool !== "Eraser"}
                 updatePosition={updatePosition}
                 roomId={roomId}
@@ -113,9 +113,9 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
               <MaskedDraggableGroup
                 key={el.id}
                 id={el.id}
+                el={el}
                 mask={el.mask}
                 position={el.center} // передаем центр круга
-                tool={tool}
                 draggable={tool === "Select" && el.tool !== "Eraser"}
                 updatePosition={updatePosition}
                 roomId={roomId}
@@ -145,9 +145,9 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
               <MaskedDraggableGroup
                 key={el.id}
                 id={el.id}
+                el={el}
                 mask={el.mask}
                 position={el.point}
-                tool={tool}
                 draggable={tool === "Select" && el.tool !== "Eraser"}
                 updatePosition={updatePosition}
                 roomId={roomId}
@@ -165,7 +165,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId, BASE_WIDTH }) => {
                       fill={el.color}
                       opacity={el.opacity}
                       stroke={el.strokeColor}
-                      strokeWidth={1}
+                      strokeWidth={0}
                       fontFamily="Calibri"
                     />
                   ))}

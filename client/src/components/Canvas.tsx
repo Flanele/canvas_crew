@@ -14,6 +14,7 @@ interface Props {
 }
 
 type Point = [number, number];
+export const BASE_WIDTH = 750;
 
 export const Canvas: React.FC<Props> = ({ roomId }) => {
   const isDrawing = React.useRef(false);
@@ -66,7 +67,6 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
 
   useCanvasSocketHandler(roomId);
 
-  const BASE_WIDTH = 750;
   const BASE_HEIGHT = 450;
   const WORKSPACE_WIDTH = 2200;
   const WORKSPACE_HEIGHT = 1400;
@@ -108,7 +108,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
             onMouseUp={handleMouseUp}
             onWheel={handleWheel}
           >
-            <CanvasLayer roomId={roomId} BASE_WIDTH={BASE_WIDTH} />
+            <CanvasLayer roomId={roomId} />
           </Stage>
 
           {showTextarea && textPos && (

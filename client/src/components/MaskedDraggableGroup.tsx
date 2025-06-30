@@ -1,15 +1,18 @@
 import { KonvaEventObject } from "konva/lib/Node";
-import { Group, Line } from "react-konva";
+import { Group, Image } from "react-konva";
 import { Socket } from "socket.io-client";
-import { Mask } from "../store/types/canvas";
+import { CanvasElement, Mask } from "../store/types/canvas";
+import React from "react";
+import { BitmapResult, renderElementToBitmap } from "../lib/renderElementToBitmap";
+import useImage from "use-image";
 
 type Point = [number, number];
 
 interface Props {
   id: string;
+  el: CanvasElement; 
   mask?: Mask;
   position: Point;
-  tool: string;
   draggable: boolean;
   updatePosition: (roomId: string, id: string, pos: Point) => void;
   roomId: string;
@@ -19,9 +22,9 @@ interface Props {
 
 export const MaskedDraggableGroup: React.FC<Props> = ({
   id,
+  el,
   mask,
   position,
-  tool,
   draggable,
   updatePosition,
   roomId,
@@ -29,6 +32,19 @@ export const MaskedDraggableGroup: React.FC<Props> = ({
   children,
 }) => {
   const [x, y] = position;
+  const hasMask = mask && mask.lines.length > 0;
+
+  const [fixedBitmap, setFixedBitmap] = React.useState<null | BitmapResult>(null);
+
+  React.useEffect(() => {
+    if (hasMask) {
+      setFixedBitmap(renderElementToBitmap(el, mask!.lines));
+    } else {
+      setFixedBitmap(null);
+    }
+  }, [hasMask, mask?.lines.length, position[0], position[1]]);
+
+  const [img] = useImage(fixedBitmap?.src || "");
 
   return (
     <Group
@@ -52,24 +68,21 @@ export const MaskedDraggableGroup: React.FC<Props> = ({
         const stage = e.target.getStage();
         if (stage) stage.container().style.cursor = "default";
       }}
-      
     >
-      {/* Основная фигура */}
-      {children}
-
-      {/* Маска-ластик */}
-      {mask?.lines.map((line, idx) => (
-        <Line
-          key={`mask-${idx}`}
-          points={line.points.flat()}
-          stroke="red"
-          strokeWidth={line.strokeWidth}
-          opacity={1}
-          globalCompositeOperation="destination-out"
-          lineCap="round"
-          lineJoin="round"
-        />
-      ))}
+      {/* Если есть маска — показываем bitmap */}
+      {fixedBitmap ? (
+         <Image
+         key={fixedBitmap.src}
+         image={img}
+         x={fixedBitmap.x - position[0]}
+         y={fixedBitmap.y - position[1]}
+         width={fixedBitmap.width}
+         height={fixedBitmap.height}
+         opacity={el.opacity}
+       />
+      ) : (
+        children
+      )}
     </Group>
   );
 };

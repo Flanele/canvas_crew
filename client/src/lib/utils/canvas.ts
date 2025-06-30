@@ -3,7 +3,6 @@ import {
   CanvasElement, Point, MaskLine
 } from '../../store/types/canvas';
 
-// Перемещение фигуры
 // Перемещение фигуры + её маски
 export function updateElementPositionHelper(el: CanvasElement, pos: Point): CanvasElement {
   // рассчитываем дельту перемещения
