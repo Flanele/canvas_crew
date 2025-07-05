@@ -10,10 +10,7 @@ export interface BitmapResult {
   height: number;
 }
 
-function catmullRomSpline(
-  points: number[][],
-  segments = 16
-): number[][] {
+function catmullRomSpline(points: number[][], segments = 16): number[][] {
   if (points.length < 3) return points;
   const result: number[][] = [];
   for (let i = 0; i < points.length - 1; i++) {
@@ -48,11 +45,11 @@ export function renderElementToBitmap(
   el: CanvasElement,
   eraserMasks: MaskLine[] = []
 ): BitmapResult {
-  // bounding box для всего, как раньше
   const allPoints: number[][] = [];
 
   const scale = window.devicePixelRatio || 1;
-  
+
+  // 1. Собираем все ключевые точки элемента (и текста, и масок) для вычисления общего bounding box
   if (el.type === "line") allPoints.push(...el.points);
   if (el.type === "rect") allPoints.push(el.start, el.end);
   if (el.type === "circle") {
@@ -62,48 +59,45 @@ export function renderElementToBitmap(
     );
   }
   if (el.type === "text") {
-    const fontSize = el.strokeWidth * 4; 
+    const fontSize = el.strokeWidth * 4;
     const padding = 10;
-    const scale = window.devicePixelRatio || 1;
-  
-    // maxWidth для wrapText — тоже умножаем на scale!
-    const maxWidth = (BASE_WIDTH - el.point[0] - padding) * scale;
-    // fontSize для wrapText — умножаем на scale!
-    const lines = wrapText(el.text, maxWidth, fontSize * scale);
-  
-    const lineHeight = fontSize * 1.2 * scale;
+    const maxWidth = BASE_WIDTH - el.point[0] - padding;
+    const lines = wrapText(el.text, maxWidth, fontSize);
+    const lineHeight = fontSize * 1.2;
     let maxTextWidth = 0;
-  
+
     const tempCanvas = document.createElement("canvas");
     const tempCtx = tempCanvas.getContext("2d")!;
-    tempCtx.font = `${fontSize * scale}px Calibri, Arial, sans-serif`;
-  
-    for (const line of lines) {
-      const w = tempCtx.measureText(line).width;
+    tempCtx.font = `${fontSize}px Calibri, Arial, sans-serif`;
+
+    for (let i = 0; i < lines.length; i++) {
+      const w = tempCtx.measureText(lines[i]).width;
       if (w > maxTextWidth) maxTextWidth = w;
+      allPoints.push([el.point[0], el.point[1] + i * lineHeight]);
+      allPoints.push([el.point[0] + w, el.point[1] + (i + 1) * lineHeight]);
     }
     const textHeight = lineHeight * lines.length;
-    allPoints.push(el.point);
-    allPoints.push([
-      el.point[0] + maxTextWidth / scale,
-      el.point[1] + textHeight / scale,
-    ]);
+    allPoints.push([el.point[0], el.point[1]]);
+    allPoints.push([el.point[0] + maxTextWidth, el.point[1] + textHeight]);
   }
-  
+
   eraserMasks.forEach((mask) => allPoints.push(...mask.points));
 
-  const xs = allPoints.map(([x]) => x);
-  const ys = allPoints.map(([, y]) => y);
+  const maskPoints = eraserMasks.flatMap((m) => m.points);
+  const bboxPoints = [...allPoints, ...maskPoints];
+
+  const xs = bboxPoints.map(([x]) => x);
+  const ys = bboxPoints.map(([, y]) => y);
   const pad = 60;
+  // 2. Вычисляем общий bounding box (с учетом паддинга) для корректного экспорта bitmap
   const minX = Math.min(...xs) - pad / 2;
   const minY = Math.min(...ys) - pad / 2;
   const maxX = Math.max(...xs) + pad / 2;
   const maxY = Math.max(...ys) + pad / 2;
   const width = Math.ceil(maxX - minX);
   const height = Math.ceil(maxY - minY);
-
+  // 3. Создаём offscreen canvas с учетом retina (devicePixelRatio) и смещением bbox
   const canvas = document.createElement("canvas");
-
   canvas.width = width * scale;
   canvas.height = height * scale;
   canvas.style.width = `${width}px`;
@@ -114,6 +108,7 @@ export function renderElementToBitmap(
   ctx.save();
   ctx.translate(-minX, -minY);
 
+  // 4. Рисуем сам элемент (линию, прямоугольник, круг или текст)
   switch (el.type) {
     case "line": {
       ctx.strokeStyle = el.tool === "Eraser" ? "#fff" : el.color;
@@ -122,11 +117,9 @@ export function renderElementToBitmap(
       ctx.lineJoin = "round";
       ctx.globalAlpha = el.opacity;
 
-      // Кисть и маркер — стили
       if (el.tool === "Brush") {
         ctx.shadowBlur = 3;
         ctx.shadowColor = el.color;
-        // Сглаживаем линию
         const smooth = catmullRomSpline(el.points, 0.6);
         ctx.beginPath();
         ctx.moveTo(smooth[0][0], smooth[0][1]);
@@ -142,7 +135,6 @@ export function renderElementToBitmap(
         el.points.slice(1).forEach(([x, y]) => ctx.lineTo(x, y));
         ctx.stroke();
       } else {
-        // Обычная линия (tension: 0)
         ctx.beginPath();
         ctx.moveTo(el.points[0][0], el.points[0][1]);
         el.points.slice(1).forEach(([x, y]) => ctx.lineTo(x, y));
@@ -175,21 +167,20 @@ export function renderElementToBitmap(
       break;
     }
     case "text": {
-      const fontSize = el.strokeWidth * 4 * scale;
+      const fontSize = el.strokeWidth * 4;
       ctx.font = `${fontSize}px Calibri, Arial, sans-serif`;
       ctx.textBaseline = "top";
       ctx.globalAlpha = el.opacity;
       ctx.fillStyle = el.color;
-    
-      // Для многострочности:
-      // !! Тут обязательно те же lines, что и выше, с учётом scale !!
-      const maxWidth = (BASE_WIDTH - el.point[0] - 10) * scale;
+
+      const padding = 10;
+      const maxWidth = BASE_WIDTH - el.point[0] - padding;
       const lines = wrapText(el.text, maxWidth, fontSize);
       const lineHeight = fontSize * 1.2;
-    
+
       for (let i = 0; i < lines.length; ++i) {
         ctx.fillText(lines[i], el.point[0], el.point[1] + i * lineHeight);
-    
+
         if (
           el.strokeColor &&
           el.strokeColor !== el.color &&
@@ -197,18 +188,22 @@ export function renderElementToBitmap(
         ) {
           ctx.save();
           ctx.strokeStyle = el.strokeColor;
-          ctx.lineWidth = 1 * scale; 
+          ctx.lineWidth = 1;
           ctx.strokeText(lines[i], el.point[0], el.point[1] + i * lineHeight);
           ctx.restore();
         }
       }
       break;
     }
-    
   }
 
-  // Маска — аккуратно стираем, тоже скруглённо!
+  // 5. Поверх элемента рисуем маски (ластик), вырезая нужные области
   eraserMasks.forEach((line) => {
+    console.log(
+      "draw mask",
+      line.points.map(([x, y]) => [x, y])
+    );
+
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
     ctx.globalAlpha = 1;

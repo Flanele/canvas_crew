@@ -135,17 +135,7 @@ export const useCanvasDrawing = ({
         if (el.type === 'line' && el.isTemp) return;
         if (targetElementIdsRef.current.includes(el.id)) return;
   
-        // ЛОГИРУЕМ ВСЁ ВАЖНОЕ
-        console.log("=== ПРОВЕРЯЕМ ЭЛЕМЕНТ ===");
-        console.log("ID:", el.id, "type:", el.type);
-        if (el.type === "line") {
-          console.log("LINE POINTS:", JSON.stringify(el.points));
-        }
-        console.log("eraserPoints:", JSON.stringify(eraserPoints));
-  
-        // Сама проверка хита
         if (hitTestEraser(eraserPoints, el)) {
-          console.log("===> ХИТ! Добавляем в targetElementIdsRef:", el.id);
           targetElementIdsRef.current.push(el.id);
         }
       });
@@ -168,10 +158,6 @@ export const useCanvasDrawing = ({
     if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
       // Применяем маску ко всем задетым элементам
       for (const targetId of targetElementIdsRef.current) {
-        console.log("eraserLinesRef.current:", JSON.stringify(eraserLinesRef.current));
-        console.log("eraserStrokeWidthsRef.current:", JSON.stringify(eraserStrokeWidthsRef.current));
-        console.log("targetElementIdsRef.current:", targetElementIdsRef.current);
-
         applyMaskToElement(
           roomId,
           targetId,
