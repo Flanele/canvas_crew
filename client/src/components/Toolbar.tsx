@@ -14,11 +14,29 @@ import {
 import { ToolIcon } from "./ToolIcon";
 import { StrokeSettingsPanel } from "./StrokeSettingsPanel";
 import { StrokeColorPicker } from "./StrokeColorPicker";
-import { useSetTool, useTool } from "../store/selectors/canvasSelectors";
+import {
+  useRedo,
+  useSetTool,
+  useTool,
+  useUndo,
+} from "../store/selectors/canvasSelectors";
+import socket from "../socket/socket";
 
-export const ToolBar = () => {
+export const ToolBar = ({ roomId }: { roomId: string }) => {
   const setTool = useSetTool();
   const tool = useTool();
+  const undo = useUndo();
+  const redo = useRedo();
+
+  const undoHandler = () => {
+    undo(roomId);
+    socket.emit("undo", { roomId });
+  };
+
+  const redoHandler = () => {
+    redo(roomId);
+    socket.emit("redo", { roomId });
+  }
 
   return (
     <div className="bg-[#D7DBD4] flex flex-col gap-10 h-full p-4">
@@ -27,7 +45,7 @@ export const ToolBar = () => {
         <ColorPicker />
       </div>
 
-      {(tool === "Circle" || tool === "Rect" || tool === 'Text') && (
+      {(tool === "Circle" || tool === "Rect" || tool === "Text") && (
         <div className="flex flex-col gap-2">
           <p className="text-xs">Stroke color:</p>
           <StrokeColorPicker />
@@ -96,12 +114,12 @@ export const ToolBar = () => {
           <ToolIcon
             icon={<Undo2 size={20} />}
             label="Undo"
-            onClick={() => console.log("TODO: Undo")}
+            onClick={undoHandler}
           />
           <ToolIcon
             icon={<Redo2 size={20} />}
             label="Redo"
-            onClick={() => console.log("TODO: Redo")}
+            onClick={redoHandler}
           />
         </div>
       </div>

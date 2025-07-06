@@ -192,6 +192,14 @@ io.on("connection", (socket) => {
   socket.on("remove-element", ({ roomId, id }) => {
     socket.to(roomId).emit("remove-element", { roomId, elementId: id });
   });
+
+  socket.on("undo", ({ roomId }) => {
+    socket.to(roomId).emit("undo", { roomId });
+  });
+
+  socket.on("redo", ({ roomId }) => {
+    socket.to(roomId).emit("redo", { roomId });
+  });
 });
 
 // --- REST API ---

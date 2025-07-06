@@ -10,6 +10,7 @@ export const useSelectedElementId = () =>
   useCanvasStore((s) => s.selectedElementId);
 
 export const useCanvases = () => useCanvasStore((s) => s.canvases);
+export const useUndoStack = () => useCanvasStore((s) => s.undoStack);
 
 const EMPTY_ARRAY: any[] = [];
 export const useCanvasElements = (roomId: string) =>
@@ -35,4 +36,5 @@ export const useApplyMaskToElement = () =>
   useCanvasStore((s) => s.applyMaskToElement);
 export const useResetCanvas = () => useCanvasStore((s) => s.resetCanvas);
 export const useRemoveElement = () => useCanvasStore((s) => s.removeElement);
-
+export const useUndo = () => useCanvasStore((s) => s.undo);
+export const useRedo = () => useCanvasStore((s) => s.redo);

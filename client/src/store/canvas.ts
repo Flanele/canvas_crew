@@ -1,10 +1,16 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
 import { CanvasElement, Point, RoomId, Tool } from "./types/canvas";
-import { applyMaskHelper, updateElementPositionHelper } from "../lib/utils/canvas";
+import {
+  applyMaskHelper,
+  saveStateForUndo,
+  updateElementPositionHelper,
+} from "../lib/utils/canvas";
 
-interface CanvasStore {
+export interface CanvasStore {
   canvases: Record<RoomId, CanvasElement[]>;
+  undoStack: Record<RoomId, CanvasElement[][]>;
+  redoStack: Record<RoomId, CanvasElement[][]>;
   color: string;
   strokeColor: string | undefined;
   strokeWidth: number;
@@ -46,16 +52,22 @@ interface CanvasStore {
     strokeWidths: number[]
   ) => void;
   removeElement: (roomId: RoomId, id: string) => void;
+
+  undo: (roomId: RoomId) => void;
+  redo: (roomId: RoomId) => void;
+
   resetCanvas: (roomId: RoomId) => void;
 }
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
   canvases: {},
+  undoStack: {},
+  redoStack: {},
   color: "#000000",
   strokeColor: undefined,
   strokeWidth: 2,
   opacity: 1,
-  tool: "Pencil",
+  tool: "Pencil" as Tool,
   text: "",
   selectedElementId: null,
 
@@ -68,6 +80,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setSelectedElement: (selectedElementId) => set({ selectedElementId }),
 
   startElement: (roomId, point, options) => {
+    saveStateForUndo(roomId, get, set);
     const state = get();
     const current = state.canvases[roomId] || [];
 
@@ -134,7 +147,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           strokeWidth,
           opacity,
           points: [point],
-          isTemp
+          isTemp,
         };
         break;
     }
@@ -193,6 +206,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   },
 
   updateElementPosition: (roomId, id, pos) => {
+    saveStateForUndo(roomId, get, set);
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];
     const updated = elements.map((el) =>
@@ -202,6 +216,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   },
 
   applyMaskToElement: (roomId, elementId, eraserLines, strokeWidths) => {
+    saveStateForUndo(roomId, get, set);
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];
     const updated = elements.map((el) =>
@@ -209,7 +224,6 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     );
     set({ canvases: { ...canvases, [roomId]: updated } });
   },
-
 
   removeElement: (roomId, id) => {
     const canvases = get().canvases;
@@ -222,7 +236,58 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     });
   },
 
+  undo: (roomId) => {
+    const { canvases, undoStack, redoStack } = get();
+    if (!(undoStack[roomId] && undoStack[roomId].length)) return;
+
+    const prev = undoStack[roomId][undoStack[roomId].length - 1];
+
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: prev,
+      },
+      undoStack: {
+        ...undoStack,
+        [roomId]: undoStack[roomId].slice(0, -1),
+      },
+      redoStack: {
+        ...redoStack,
+        [roomId]: [
+          ...(redoStack[roomId] || []),
+          structuredClone(canvases[roomId]),
+        ],
+      },
+    });
+  },
+
+  redo: (roomId) => {
+    const { canvases, undoStack, redoStack } = get();
+    if (!(redoStack[roomId] && redoStack[roomId].length)) return;
+
+    const next = redoStack[roomId][redoStack[roomId].length - 1];
+
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: next,
+      },
+      undoStack: {
+        ...undoStack,
+        [roomId]: [
+          ...(undoStack[roomId] || []),
+          structuredClone(canvases[roomId]),
+        ],
+      },
+      redoStack: {
+        ...redoStack,
+        [roomId]: redoStack[roomId].slice(0, -1),
+      },
+    });
+  },
+
   resetCanvas: (roomId) => {
+    saveStateForUndo(roomId, get, set);
     const canvases = get().canvases;
     set({
       canvases: {

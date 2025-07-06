@@ -27,7 +27,7 @@ export default function CanvasPage() {
 
         {/* Левый блок */}
         <div className="w-[20%] h-[calc(100vh-62px)] border-r-1 border-border">
-          <ToolBar />
+          <ToolBar roomId={id} />
         </div>
 
         {/* Центральный блок */}

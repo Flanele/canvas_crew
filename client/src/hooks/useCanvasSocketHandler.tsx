@@ -3,8 +3,10 @@ import socket from "../socket/socket";
 import { Point, Tool } from "../store/types/canvas";
 import {
   useApplyMaskToElement,
+  useRedo,
   useRemoveElement,
   useStartElement,
+  useUndo,
   useUpdateElement,
   useUpdateElementPosition,
   useUpdateTextElement,
@@ -17,6 +19,8 @@ export const useCanvasSocketHandler = (roomId: string) => {
   const updateElementPosition = useUpdateElementPosition();
   const applyMaskToElement = useApplyMaskToElement();
   const removeElement = useRemoveElement();
+  const undo = useUndo();
+  const redo = useRedo();
 
   React.useEffect(() => {
     const handleStart = ({
@@ -117,12 +121,24 @@ export const useCanvasSocketHandler = (roomId: string) => {
       removeElement(roomId, elementId);
     };
 
+    const handleUndo = ({ roomId: incomingRoomId }: { roomId: string }) => {
+      if (incomingRoomId !== roomId) return;
+      undo(roomId);
+    };
+
+    const handleRedo = ({ roomId: incomingRoomId }: { roomId: string }) => {
+      if (incomingRoomId !== roomId) return;
+      redo(roomId);
+    };
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
     socket.on("text-change", handleTextChange);
     socket.on("move-element", handleMoveElement);
     socket.on("apply-mask", handleApplyMask);
     socket.on("remove-element", handleRemoveElement);
+    socket.on("undo", handleUndo);
+    socket.on("redo", handleRedo);
 
     return () => {
       socket.off("start-line", handleStart);
@@ -131,6 +147,8 @@ export const useCanvasSocketHandler = (roomId: string) => {
       socket.off("move-element", handleMoveElement);
       socket.off("apply-mask", handleApplyMask);
       socket.off("remove-element", handleRemoveElement);
+      socket.off("undo", handleUndo);
+      socket.off("redo", handleRedo);
     };
   }, [roomId]);
 };

@@ -1,17 +1,24 @@
 import { nanoid } from "nanoid";
 import {
-  CanvasElement, Point, MaskLine
-} from '../../store/types/canvas';
+  CanvasElement,
+  Point,
+  MaskLine,
+  RoomId,
+} from "../../store/types/canvas";
+import { CanvasStore } from "../../store/canvas";
 
 // Перемещение фигуры + её маски
-export function updateElementPositionHelper(el: CanvasElement, pos: Point): CanvasElement {
+export function updateElementPositionHelper(
+  el: CanvasElement,
+  pos: Point
+): CanvasElement {
   // рассчитываем дельту перемещения
   const oldOrigin = (() => {
-    if (el.type === "line")    return el.points[0];
-    if (el.type === "rect")    return el.start;
-    if (el.type === "circle")  return el.center;
-    if (el.type === "text")    return el.point;
-    return [0,0] as Point;
+    if (el.type === "line") return el.points[0];
+    if (el.type === "rect") return el.start;
+    if (el.type === "circle") return el.center;
+    if (el.type === "text") return el.point;
+    return [0, 0] as Point;
   })();
   const dx = pos[0] - oldOrigin[0];
   const dy = pos[1] - oldOrigin[1];
@@ -50,14 +57,12 @@ export function updateElementPositionHelper(el: CanvasElement, pos: Point): Canv
   return moved;
 }
 
-
 // Маска
 export function applyMaskHelper(
   el: CanvasElement,
   eraserLines: Point[][],
   strokeWidths: number[]
 ): CanvasElement {
-
   const maskLines: MaskLine[] = eraserLines.map((line, idx) => ({
     points: line,
     strokeWidth: strokeWidths[idx] ?? 2,
@@ -74,4 +79,26 @@ export function applyMaskHelper(
       ? { ...el.mask, lines: [...el.mask.lines, ...maskLines] }
       : newMask,
   };
+}
+
+export function saveStateForUndo(
+  roomId: RoomId,
+  get: () => CanvasStore,
+  set: (partial: Partial<CanvasStore>) => void
+) {
+  const canvases = get().canvases;
+  const undoStack = get().undoStack;
+  set({
+    undoStack: {
+      ...undoStack,
+      [roomId]: [
+        ...(undoStack[roomId] || []),
+        structuredClone(canvases[roomId] || []),
+      ],
+    },
+    redoStack: {
+      ...get().redoStack,
+      [roomId]: [],
+    },
+  });
 }
