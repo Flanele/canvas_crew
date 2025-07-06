@@ -6,6 +6,8 @@ import { KonvaEventObject } from "konva/lib/Node";
 import { CanvasElement } from "../store/types/canvas";
 import useImage from "use-image";
 import { renderElementToBitmap } from "../lib/renderElementToBitmap";
+import { useCanvasStore } from "../store/canvas";
+import { saveStateForUndo } from "../lib/utils/canvas";
 type Point = [number, number];
 
 interface Props {
@@ -25,7 +27,6 @@ export const DraggableLine: React.FC<Props> = ({
   socket,
   style,
 }) => {
-
   const [fixedBitmap, setFixedBitmap] = React.useState<null | {
     src: string;
     x: number;
@@ -55,12 +56,19 @@ export const DraggableLine: React.FC<Props> = ({
   const relativePoints = el.points.map(([x, y]) => [x - offsetX, y - offsetY]);
   const flatPoints = relativePoints.flat();
 
+  const get = useCanvasStore.getState;
+  const set = useCanvasStore.setState;
+
   return (
     <Group
       id={el.id}
       x={fixedBitmap ? el.points[0][0] : offsetX}
       y={fixedBitmap ? el.points[0][1] : offsetY}
       draggable={draggable}
+      onDragStart={() => {
+        saveStateForUndo(roomId, get, set);
+        socket.emit("update-undoStack", { roomId });
+      }}
       onDragMove={(e: KonvaEventObject<DragEvent>) => {
         const { x, y } = e.target.position();
         updatePosition(roomId, el.id, [x, y]);
@@ -92,7 +100,7 @@ export const DraggableLine: React.FC<Props> = ({
           y={fixedBitmap.y - el.points[0][1]}
           width={fixedBitmap.width}
           height={fixedBitmap.height}
-          opacity={1}  // чтобы после enderElementToBitmap не установилась двойная opacity
+          opacity={1} // чтобы после enderElementToBitmap не установилась двойная opacity
         />
       ) : (
         // Если нет маски, обычная Line

@@ -3,14 +3,19 @@ import { Group, Image } from "react-konva";
 import { Socket } from "socket.io-client";
 import { CanvasElement, Mask } from "../store/types/canvas";
 import React from "react";
-import { BitmapResult, renderElementToBitmap } from "../lib/renderElementToBitmap";
+import {
+  BitmapResult,
+  renderElementToBitmap,
+} from "../lib/renderElementToBitmap";
 import useImage from "use-image";
+import { useCanvasStore } from "../store/canvas";
+import { saveStateForUndo } from "../lib/utils/canvas";
 
 type Point = [number, number];
 
 interface Props {
   id: string;
-  el: CanvasElement; 
+  el: CanvasElement;
   mask?: Mask;
   position: Point;
   draggable: boolean;
@@ -34,7 +39,9 @@ export const MaskedDraggableGroup: React.FC<Props> = ({
   const [x, y] = position;
   const hasMask = mask && mask.lines.length > 0;
 
-  const [fixedBitmap, setFixedBitmap] = React.useState<null | BitmapResult>(null);
+  const [fixedBitmap, setFixedBitmap] = React.useState<null | BitmapResult>(
+    null
+  );
 
   React.useEffect(() => {
     if (hasMask) {
@@ -46,11 +53,18 @@ export const MaskedDraggableGroup: React.FC<Props> = ({
 
   const [img] = useImage(fixedBitmap?.src || "");
 
+  const get = useCanvasStore.getState;
+  const set = useCanvasStore.setState;
+
   return (
     <Group
       x={x}
       y={y}
       draggable={draggable}
+      onDragStart={() => {
+        saveStateForUndo(roomId, get, set);
+        socket.emit("update-undoStack", { roomId });
+      }}
       onDragMove={(e: KonvaEventObject<DragEvent>) => {
         const newPos = e.target.position();
         updatePosition(roomId, id, [newPos.x, newPos.y]);
@@ -71,15 +85,15 @@ export const MaskedDraggableGroup: React.FC<Props> = ({
     >
       {/* Если есть маска — показываем bitmap */}
       {fixedBitmap ? (
-         <Image
-         key={fixedBitmap.src}
-         image={img}
-         x={fixedBitmap.x - position[0]}
-         y={fixedBitmap.y - position[1]}
-         width={fixedBitmap.width}
-         height={fixedBitmap.height}
-         opacity={el.opacity}
-       />
+        <Image
+          key={fixedBitmap.src}
+          image={img}
+          x={fixedBitmap.x - position[0]}
+          y={fixedBitmap.y - position[1]}
+          width={fixedBitmap.width}
+          height={fixedBitmap.height}
+          opacity={el.opacity}
+        />
       ) : (
         children
       )}

@@ -206,7 +206,6 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   },
 
   updateElementPosition: (roomId, id, pos) => {
-    saveStateForUndo(roomId, get, set);
     const canvases = get().canvases;
     const elements = canvases[roomId] || [];
     const updated = elements.map((el) =>

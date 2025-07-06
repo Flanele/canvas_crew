@@ -200,6 +200,10 @@ io.on("connection", (socket) => {
   socket.on("redo", ({ roomId }) => {
     socket.to(roomId).emit("redo", { roomId });
   });
+
+  socket.on("update-undoStack", ({ roomId }) => {
+    socket.to(roomId).emit("update-undoStack", { roomId });
+  });
 });
 
 // --- REST API ---

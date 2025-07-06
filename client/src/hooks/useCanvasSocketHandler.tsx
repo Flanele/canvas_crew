@@ -11,6 +11,8 @@ import {
   useUpdateElementPosition,
   useUpdateTextElement,
 } from "../store/selectors/canvasSelectors";
+import { useCanvasStore } from "../store/canvas";
+import { saveStateForUndo } from "../lib/utils/canvas";
 
 export const useCanvasSocketHandler = (roomId: string) => {
   const startElement = useStartElement();
@@ -21,6 +23,9 @@ export const useCanvasSocketHandler = (roomId: string) => {
   const removeElement = useRemoveElement();
   const undo = useUndo();
   const redo = useRedo();
+
+  const get = useCanvasStore.getState;
+  const set = useCanvasStore.setState;
 
   React.useEffect(() => {
     const handleStart = ({
@@ -131,6 +136,15 @@ export const useCanvasSocketHandler = (roomId: string) => {
       redo(roomId);
     };
 
+    const handleUpdateUndoStack = ({
+      roomId: incomingRoomId,
+    }: {
+      roomId: string;
+    }) => {
+      if (incomingRoomId !== roomId) return;
+      saveStateForUndo(roomId, get, set);
+    };
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
     socket.on("text-change", handleTextChange);
@@ -139,6 +153,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
     socket.on("remove-element", handleRemoveElement);
     socket.on("undo", handleUndo);
     socket.on("redo", handleRedo);
+    socket.on("update-undoStack", handleUpdateUndoStack);
 
     return () => {
       socket.off("start-line", handleStart);
@@ -149,6 +164,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
       socket.off("remove-element", handleRemoveElement);
       socket.off("undo", handleUndo);
       socket.off("redo", handleRedo);
+      socket.off("update-undoStack", handleUpdateUndoStack);
     };
   }, [roomId]);
 };
