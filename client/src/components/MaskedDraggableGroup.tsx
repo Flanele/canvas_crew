@@ -92,7 +92,7 @@ export const MaskedDraggableGroup: React.FC<Props> = ({
           y={fixedBitmap.y - position[1]}
           width={fixedBitmap.width}
           height={fixedBitmap.height}
-          opacity={el.opacity}
+          opacity={1}
         />
       ) : (
         children

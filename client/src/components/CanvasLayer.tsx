@@ -165,7 +165,7 @@ export const CanvasLayer: React.FC<Props> = ({ roomId }) => {
                       fill={el.color}
                       opacity={el.opacity}
                       stroke={el.strokeColor}
-                      strokeWidth={1}
+                      strokeWidth={el.strokeColor === el.color? 0 : 1}
                       fontFamily="Calibri"
                     />
                   ))}

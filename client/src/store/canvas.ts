@@ -49,7 +49,8 @@ export interface CanvasStore {
     roomId: RoomId,
     elementId: string,
     eraserLines: Point[][],
-    strokeWidths: number[]
+    strokeWidths: number[],
+    tempLineId?: string,
   ) => void;
   removeElement: (roomId: RoomId, id: string) => void;
 
@@ -214,14 +215,35 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     set({ canvases: { ...canvases, [roomId]: updated } });
   },
 
-  applyMaskToElement: (roomId, elementId, eraserLines, strokeWidths) => {
-    saveStateForUndo(roomId, get, set);
+  applyMaskToElement: (
+    roomId,
+    elementId,
+    eraserLines,
+    strokeWidths,
+    tempLineId
+  ) => {
     const canvases = get().canvases;
-    const elements = canvases[roomId] || [];
-    const updated = elements.map((el) =>
+    let elements = canvases[roomId] || [];
+
+      // 1. Удаляем временную линию
+    if (tempLineId) {
+      elements = elements.filter((el) => el.id !== tempLineId);
+    }
+  
+    // 2. Сохраняем стейт для undo 
+    saveStateForUndo(roomId, () => ({ ...get(), canvases: { ...canvases, [roomId]: elements } }), set);
+  
+    // 3. Применяем маску
+    elements = elements.map((el) =>
       el.id !== elementId ? el : applyMaskHelper(el, eraserLines, strokeWidths)
     );
-    set({ canvases: { ...canvases, [roomId]: updated } });
+  
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: elements,
+      },
+    });
   },
 
   removeElement: (roomId, id) => {

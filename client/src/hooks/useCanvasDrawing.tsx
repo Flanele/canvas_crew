@@ -150,29 +150,31 @@ export const useCanvasDrawing = ({
     });
   };
   
-  
 
   const handleMouseUp = React.useCallback(() => {
-    let tempLineId = drawingIdRef.current;
+    const tempLineId = drawingIdRef.current;
   
     if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
-      // Применяем маску ко всем задетым элементам
-      for (const targetId of targetElementIdsRef.current) {
-        applyMaskToElement(
-          roomId,
-          targetId,
-          eraserLinesRef.current,
-          eraserStrokeWidthsRef?.current
-        );
-        socket.emit("apply-mask", {
-          roomId,
-          elementId: targetId,
-          eraserLines: eraserLinesRef.current,
-          strokeWidths: eraserStrokeWidthsRef.current,
-        });
-      }
-  
-      if (tempLineId) {
+      // Есть ли задетые элементы?
+      if (targetElementIdsRef.current.length > 0 && tempLineId) {
+        for (const targetId of targetElementIdsRef.current) {
+          applyMaskToElement(
+            roomId,
+            targetId,
+            eraserLinesRef.current,
+            eraserStrokeWidthsRef.current,
+            tempLineId 
+          );
+          socket.emit("apply-mask", {
+            roomId,
+            elementId: targetId,
+            eraserLines: eraserLinesRef.current,
+            strokeWidths: eraserStrokeWidthsRef.current,
+            tempLineId
+          });
+        }
+      } else if (tempLineId) {
+        // Если маску не накладывали — просто удаляем временную линию
         removeElement(roomId, tempLineId);
         socket.emit("remove-element", {
           roomId,
@@ -186,7 +188,7 @@ export const useCanvasDrawing = ({
   
     isDrawing.current = false;
     drawingIdRef.current = null;
-  }, [tool, roomId, applyMaskToElement]);
+  }, [tool, roomId, applyMaskToElement, removeElement]);
   
   
   return {

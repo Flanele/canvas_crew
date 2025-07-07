@@ -107,14 +107,16 @@ export const useCanvasSocketHandler = (roomId: string) => {
       elementId,
       eraserLines,
       strokeWidths,
+      tempLineId,
     }: {
       roomId: string;
       elementId: string;
       eraserLines: Point[][];
       strokeWidths: number[];
+      tempLineId: string;
     }) => {
       if (incomingRoomId !== roomId) return;
-      applyMaskToElement(roomId, elementId, eraserLines, strokeWidths);
+      applyMaskToElement(roomId, elementId, eraserLines, strokeWidths, tempLineId);
     };
 
     const handleRemoveElement = ({

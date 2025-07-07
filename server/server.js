@@ -182,10 +182,10 @@ io.on("connection", (socket) => {
 
   socket.on(
     "apply-mask",
-    ({ roomId, elementId, eraserLines, strokeWidths }) => {
+    ({ roomId, elementId, eraserLines, strokeWidths, tempLineId }) => {
       socket
         .to(roomId)
-        .emit("apply-mask", { roomId, elementId, eraserLines, strokeWidths });
+        .emit("apply-mask", { roomId, elementId, eraserLines, strokeWidths, tempLineId });
     }
   );
 

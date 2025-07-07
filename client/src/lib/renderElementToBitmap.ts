@@ -170,6 +170,7 @@ export function renderElementToBitmap(
       const fontSize = el.strokeWidth * 4;
       ctx.font = `${fontSize}px Calibri, Arial, sans-serif`;
       ctx.textBaseline = "top";
+      ctx.globalAlpha = el.opacity;
       ctx.fillStyle = el.color;
 
       const padding = 10;
