@@ -204,6 +204,10 @@ io.on("connection", (socket) => {
   socket.on("update-undoStack", ({ roomId }) => {
     socket.to(roomId).emit("update-undoStack", { roomId });
   });
+
+  socket.on("reset-canvas", ({ roomId }) => {
+    socket.to(roomId).emit("reset-canvas", { roomId });
+  });
 });
 
 // --- REST API ---

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { RefObject } from "react";
 import { Stage } from "react-konva";
 import Konva from "konva";
 import { useZoom } from "../hooks/useZoom";
@@ -11,14 +11,14 @@ import { useColor, useOpacity, useStartElement, useStrokeColor, useStrokeWidth, 
 
 interface Props {
   roomId: string;
+  stageRef: RefObject<Konva.Stage | null>;
 }
 
 type Point = [number, number];
 export const BASE_WIDTH = 750;
 
-export const Canvas: React.FC<Props> = ({ roomId }) => {
+export const Canvas: React.FC<Props> = ({ roomId, stageRef }) => {
   const isDrawing = React.useRef(false);
-  const stageRef = React.useRef<Konva.Stage | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const drawingIdRef = React.useRef<string | null>(null);
   const eraserLinesRef = React.useRef<Point[][]>([]);
@@ -88,7 +88,7 @@ export const Canvas: React.FC<Props> = ({ roomId }) => {
   return (
     <div
       ref={containerRef}
-      className="w-full h-[calc(100vh-62px)] bg-bg overflow-auto"
+      className="w-full h-[calc(100vh-92px)] bg-bg overflow-auto"
     >
       <div
         className="relative"

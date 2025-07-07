@@ -5,6 +5,7 @@ import {
   useApplyMaskToElement,
   useRedo,
   useRemoveElement,
+  useResetCanvas,
   useStartElement,
   useUndo,
   useUpdateElement,
@@ -23,6 +24,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
   const removeElement = useRemoveElement();
   const undo = useUndo();
   const redo = useRedo();
+  const reset = useResetCanvas();
 
   const get = useCanvasStore.getState;
   const set = useCanvasStore.setState;
@@ -145,6 +147,15 @@ export const useCanvasSocketHandler = (roomId: string) => {
       saveStateForUndo(roomId, get, set);
     };
 
+    const handleResetCanvas = ({
+      roomId: incomingRoomId,
+    }: {
+      roomId: string;
+    }) => {
+      if (incomingRoomId !== roomId) return;
+      reset(roomId);
+    };
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
     socket.on("text-change", handleTextChange);
@@ -154,6 +165,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
     socket.on("undo", handleUndo);
     socket.on("redo", handleRedo);
     socket.on("update-undoStack", handleUpdateUndoStack);
+    socket.on("reset-canvas", handleResetCanvas);
 
     return () => {
       socket.off("start-line", handleStart);
@@ -165,6 +177,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
       socket.off("undo", handleUndo);
       socket.off("redo", handleRedo);
       socket.off("update-undoStack", handleUpdateUndoStack);
+      socket.off("reset-canvas", handleResetCanvas);
     };
   }, [roomId]);
 };
