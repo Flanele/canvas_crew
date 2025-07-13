@@ -32,7 +32,7 @@ export default function CanvasPage() {
 
       <div className="flex flex-grow">
         {/* Левый блок */}
-        <div className="w-[20%] h-[calc(100vh-92px)] border-r-1 border-border">
+        <div className="w-[20%] h-[calc(100vh-92px)] bg-[#D7DBD4] border-r-1 border-border overflow-y-auto">
           <ToolBar roomId={id} />
         </div>
 

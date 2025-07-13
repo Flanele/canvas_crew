@@ -27,6 +27,8 @@ export interface CanvasStore {
   setText: (text: string) => void;
   setSelectedElement: (id: string | null) => void;
 
+  setCanvas: (roomId: RoomId, elements: CanvasElement[]) => void;
+
   startElement: (
     roomId: RoomId,
     point: Point,
@@ -79,6 +81,17 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setTool: (tool) => set({ tool }),
   setText: (text) => set({ text }),
   setSelectedElement: (selectedElementId) => set({ selectedElementId }),
+
+  setCanvas: (roomId, elements) => {
+    const canvases = get().canvases;
+
+    set({
+      canvases: {
+        ...canvases,
+        [roomId]: elements,
+      }
+    })
+  },
 
   startElement: (roomId, point, options) => {
     saveStateForUndo(roomId, get, set);

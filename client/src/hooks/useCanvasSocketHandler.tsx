@@ -1,11 +1,12 @@
 import React from "react";
 import socket from "../socket/socket";
-import { Point, Tool } from "../store/types/canvas";
+import { CanvasElement, Point, Tool } from "../store/types/canvas";
 import {
   useApplyMaskToElement,
   useRedo,
   useRemoveElement,
   useResetCanvas,
+  useSetCanvas,
   useStartElement,
   useUndo,
   useUpdateElement,
@@ -25,6 +26,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
   const undo = useUndo();
   const redo = useRedo();
   const reset = useResetCanvas();
+  const setCanvas = useSetCanvas();
 
   const get = useCanvasStore.getState;
   const set = useCanvasStore.setState;
@@ -116,7 +118,13 @@ export const useCanvasSocketHandler = (roomId: string) => {
       tempLineId: string;
     }) => {
       if (incomingRoomId !== roomId) return;
-      applyMaskToElement(roomId, elementId, eraserLines, strokeWidths, tempLineId);
+      applyMaskToElement(
+        roomId,
+        elementId,
+        eraserLines,
+        strokeWidths,
+        tempLineId
+      );
     };
 
     const handleRemoveElement = ({
@@ -158,6 +166,18 @@ export const useCanvasSocketHandler = (roomId: string) => {
       reset(roomId);
     };
 
+    const handleSetCanvasState = ({
+      roomId: incomingRoomId, // <-- именно incomingRoomId!
+      elements,
+    }: {
+      roomId: string;
+      elements: CanvasElement[];
+    }) => {
+      if (incomingRoomId !== roomId) return;
+
+      setCanvas(roomId, elements);
+    };
+
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
     socket.on("text-change", handleTextChange);
@@ -168,6 +188,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
     socket.on("redo", handleRedo);
     socket.on("update-undoStack", handleUpdateUndoStack);
     socket.on("reset-canvas", handleResetCanvas);
+    socket.on("loading-canvas", handleSetCanvasState);
 
     return () => {
       socket.off("start-line", handleStart);
@@ -180,6 +201,7 @@ export const useCanvasSocketHandler = (roomId: string) => {
       socket.off("redo", handleRedo);
       socket.off("update-undoStack", handleUpdateUndoStack);
       socket.off("reset-canvas", handleResetCanvas);
+      socket.off("loading-canvas", handleSetCanvasState);
     };
   }, [roomId]);
 };

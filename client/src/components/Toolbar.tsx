@@ -39,9 +39,9 @@ export const ToolBar = ({ roomId }: { roomId: string }) => {
   }
 
   return (
-    <div className="bg-[#D7DBD4] flex flex-col gap-10 h-full p-4">
+    <div className="flex flex-col gap-10 h-full p-4">
       {/* Top: Color Picker */}
-      <div className="flex justify-center py-4">
+      <div className="flex justify-center py-5">
         <ColorPicker />
       </div>
 

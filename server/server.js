@@ -4,6 +4,8 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const clearChatHistory = require("./services/clearChatHistory");
+const canvasState = require("./state/canvasState");
+const updateElementPositionHelper = require("./lib/updateElementPositionHelper");
 const { nanoid } = require("nanoid");
 
 const { Server } = require("socket.io");
@@ -102,6 +104,11 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("message", systemMessage);
 
       io.emit("update-rooms", getVisibleRooms());
+
+      const elements = canvasState[roomId];
+      if (!elements) return;
+
+      socket.emit("loading-canvas", { roomId, elements });
     }
   });
 
@@ -153,6 +160,7 @@ io.on("connection", (socket) => {
       opacity,
       tool,
       text,
+      isTemp,
     }) => {
       socket.to(roomId).emit("start-line", {
         roomId,
@@ -164,33 +172,120 @@ io.on("connection", (socket) => {
         opacity,
         tool,
         text,
+        isTemp,
       });
+
+      if (isTemp) return;
+
+      let type;
+      if (tool === "Rect") type = "rect";
+      else if (tool === "Circle") type = "circle";
+      else if (tool === "Text") type = "text";
+      else type = "line";
+
+      const newElement = {
+        id,
+        type,
+        tool,
+        color,
+        strokeColor,
+        strokeWidth,
+        opacity,
+        // Поля в зависимости от типа:
+        ...(type === "rect" && { start: point, end: point }),
+        ...(type === "circle" && { center: point, radius: 0 }),
+        ...(type === "text" && { point, text }),
+        ...(type === "line" && { points: [point] }),
+      };
+
+      if (!canvasState[roomId]) {
+        canvasState[roomId] = [];
+      }
+
+      canvasState[roomId].push(newElement);
     }
   );
 
   socket.on("draw-line", ({ roomId, id, point }) => {
     socket.to(roomId).emit("draw-line", { roomId, id, point });
+
+    const elements = canvasState[roomId];
+    if (!elements) return;
+
+    const el = elements.find((e) => e.id === id);
+    if (!el) return;
+
+    if (el.type === "line") {
+      if (!el.points) el.points = [];
+      el.points.push(point);
+    } else if (el.type === "rect") {
+      el.end = point;
+    } else if (el.type === "circle") {
+      const dx = point[0] - el.center[0];
+      const dy = point[1] - el.center[1];
+      el.radius = Math.sqrt(dx * dx + dy * dy);
+    }
   });
 
   socket.on("text-change", ({ roomId, id, text }) => {
     socket.to(roomId).emit("text-change", { roomId, id, text });
+
+    const elements = canvasState[roomId];
+    if (!elements) return;
+
+    const el = elements.find((e) => e.id === id && e.type === "text");
+    if (!el) return;
+
+    el.text = text;
   });
 
   socket.on("move-element", ({ roomId, id, point }) => {
     socket.to(roomId).emit("move-element", { roomId, id, point });
+
+    const elements = canvasState[roomId];
+    if (!elements) return;
+    const idx = elements.findIndex((e) => e.id === id);
+    if (idx === -1) return;
+    elements[idx] = updateElementPositionHelper(elements[idx], point);
   });
 
   socket.on(
     "apply-mask",
     ({ roomId, elementId, eraserLines, strokeWidths, tempLineId }) => {
-      socket
-        .to(roomId)
-        .emit("apply-mask", { roomId, elementId, eraserLines, strokeWidths, tempLineId });
+      socket.to(roomId).emit("apply-mask", {
+        roomId,
+        elementId,
+        eraserLines,
+        strokeWidths,
+        tempLineId,
+      });
+
+      const elements = canvasState[roomId];
+      if (!elements) return;
+
+      const el = elements.find((el) => el.id === elementId);
+      if (!el) return;
+
+      const maskLines = eraserLines.map((points, idx) => ({
+        points,
+        strokeWidth: strokeWidths[idx] ?? 2,
+      }));
+
+      if (el.mask) {
+        el.mask.lines.push(...maskLines);
+      } else {
+        el.mask = { lines: maskLines };
+      }
     }
   );
 
   socket.on("remove-element", ({ roomId, id }) => {
     socket.to(roomId).emit("remove-element", { roomId, elementId: id });
+
+    const elements = canvasState[roomId];
+    if (!elements) return;
+
+    canvasState[roomId] = elements.filter((e) => e.id !== id);
   });
 
   socket.on("undo", ({ roomId }) => {

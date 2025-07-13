@@ -38,3 +38,4 @@ export const useResetCanvas = () => useCanvasStore((s) => s.resetCanvas);
 export const useRemoveElement = () => useCanvasStore((s) => s.removeElement);
 export const useUndo = () => useCanvasStore((s) => s.undo);
 export const useRedo = () => useCanvasStore((s) => s.redo);
+export const useSetCanvas = () => useCanvasStore((s) => s.setCanvas);
