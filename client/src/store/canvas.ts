@@ -27,7 +27,14 @@ export interface CanvasStore {
   setText: (text: string) => void;
   setSelectedElement: (id: string | null) => void;
 
-  setCanvas: (roomId: RoomId, elements: CanvasElement[]) => void;
+  setCanvas: (
+    roomId: RoomId,
+    payload: {
+      elements: CanvasElement[];
+      undoStack: CanvasElement[][];
+      redoStack: CanvasElement[][];
+    }
+  ) => void;
 
   startElement: (
     roomId: RoomId,
@@ -52,7 +59,7 @@ export interface CanvasStore {
     elementId: string,
     eraserLines: Point[][],
     strokeWidths: number[],
-    tempLineId?: string,
+    tempLineId?: string
   ) => void;
   removeElement: (roomId: RoomId, id: string) => void;
 
@@ -82,16 +89,17 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setText: (text) => set({ text }),
   setSelectedElement: (selectedElementId) => set({ selectedElementId }),
 
-  setCanvas: (roomId, elements) => {
+  setCanvas: (roomId, { elements, undoStack, redoStack }) => {
     const canvases = get().canvases;
-
+    const undo = get().undoStack;
+    const redo = get().redoStack;
+  
     set({
-      canvases: {
-        ...canvases,
-        [roomId]: elements,
-      }
-    })
-  },
+      canvases: { ...canvases, [roomId]: elements },
+      undoStack: { ...undo, [roomId]: undoStack },
+      redoStack: { ...redo, [roomId]: redoStack },
+    });
+  },  
 
   startElement: (roomId, point, options) => {
     saveStateForUndo(roomId, get, set);
@@ -238,19 +246,23 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     const canvases = get().canvases;
     let elements = canvases[roomId] || [];
 
-      // 1. Удаляем временную линию
+    // 1. Удаляем временную линию
     if (tempLineId) {
       elements = elements.filter((el) => el.id !== tempLineId);
     }
-  
-    // 2. Сохраняем стейт для undo 
-    saveStateForUndo(roomId, () => ({ ...get(), canvases: { ...canvases, [roomId]: elements } }), set);
-  
+
+    // 2. Сохраняем стейт для undo
+    saveStateForUndo(
+      roomId,
+      () => ({ ...get(), canvases: { ...canvases, [roomId]: elements } }),
+      set
+    );
+
     // 3. Применяем маску
     elements = elements.map((el) =>
       el.id !== elementId ? el : applyMaskHelper(el, eraserLines, strokeWidths)
     );
-  
+
     set({
       canvases: {
         ...canvases,

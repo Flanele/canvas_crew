@@ -79,6 +79,7 @@ export const useCanvasDrawing = ({
 
     if (tool === "Text") {
       handleStartText(x, y);
+      return;
     }
 
     // остальные фигуры

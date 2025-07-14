@@ -29,8 +29,14 @@
  */
 
 /**
- * @type {Object.<string, CanvasElement[]>}
+ * @typedef {Object} ServerCanvasRoomState
+ * @property {CanvasElement[]} elements
+ * @property {CanvasElement[][]} undoStack
+ * @property {CanvasElement[][]} redoStack
+ */
+
+/**
+ * @type {Object.<string, ServerCanvasRoomState>}
  */
 const canvasState = {};
 
-module.exports = canvasState;

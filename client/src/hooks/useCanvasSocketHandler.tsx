@@ -167,16 +167,20 @@ export const useCanvasSocketHandler = (roomId: string) => {
     };
 
     const handleSetCanvasState = ({
-      roomId: incomingRoomId, // <-- именно incomingRoomId!
+      roomId: incomingRoomId,
       elements,
+      undoStack,
+      redoStack,
     }: {
       roomId: string;
       elements: CanvasElement[];
+      undoStack: CanvasElement[][];
+      redoStack: CanvasElement[][];
     }) => {
       if (incomingRoomId !== roomId) return;
-
-      setCanvas(roomId, elements);
-    };
+      console.log('[CLIENT][loading-canvas] Получили:', { roomId: incomingRoomId, elements, undoStack, redoStack });
+      setCanvas(roomId, { elements, undoStack, redoStack });
+    };    
 
     socket.on("start-line", handleStart);
     socket.on("draw-line", handleMove);
