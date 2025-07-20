@@ -22,6 +22,7 @@ const corsOptions = {
   methods: ["GET", "POST", "DELETE"],
 };
 server.use(cors(corsOptions));
+server.use(express.json());
 
 // --- HTTP & Socket.IO Setup ---
 const httpServer = http.createServer(server);
@@ -35,7 +36,7 @@ const rooms = new Map();
 io.on("connection", (socket) => {
   console.log(`🟢 Socket.IO: User ${socket.id} connected`);
 
-  socket.on("create-room", ({ roomId, isPrivate = false }) => {
+  socket.on("create-room", ({ roomId, isPrivate }) => {
     socket.join(roomId);
     console.log(`👤 User ${socket.id} created room ${roomId}`);
 
@@ -56,7 +57,7 @@ io.on("connection", (socket) => {
       delete room.timeout;
     }
 
-    room.sockets.add(socket.id);
+    // room.sockets.add(socket.id);
     room.active = true;
 
     io.emit("update-rooms", getVisibleRooms());
@@ -67,19 +68,28 @@ io.on("connection", (socket) => {
 
     for (const [roomId, room] of rooms.entries()) {
       room.sockets.delete(socket.id);
+      console.log(
+        `[DEBUG] Комната ${roomId}, осталось сокетов: ${room.sockets.size}`
+      );
 
       if (room.sockets.size === 0 && !room.timeout) {
         room.timeout = setTimeout(() => {
           room.active = false;
           console.log(`😴 Room ${roomId} is now inactive`);
           io.emit("update-rooms", getVisibleRooms());
-        }, 1200_000); // 20 minutes
+        }, 30 * 60 * 1000); // 30 minutes
       }
     }
   });
 
   socket.on("join-room", ({ roomId, username }) => {
     const room = rooms.get(roomId);
+
+    if (!room) {
+      socket.emit("room-not-found", { roomId });
+      return;
+    }
+
     if (room) {
       socket.join(roomId);
       room.sockets.add(socket.id);
@@ -367,7 +377,7 @@ io.on("connection", (socket) => {
 // --- REST API ---
 server.get("/api/rooms", (req, res) => {
   try {
-    res.json(getVisibleRooms());
+    res.status(200).json(getVisibleRooms());
   } catch (error) {
     console.error("❌ Error fetching rooms:", error);
     res.status(500).json({ message: "Error fetching rooms" });
@@ -379,6 +389,15 @@ function getVisibleRooms() {
     .filter((room) => room.active && !room.private)
     .map(({ id, name }) => ({ id, name }));
 }
+
+server.post("/api/rooms/check", (req, res) => {
+  const { ids } = req.body;
+  const foundRooms = Array.from(rooms.values())
+    .filter((room) => ids.includes(room.id))
+    .map(({ id, name }) => ({ id, name }));
+  res.status(200).json(foundRooms);
+});
+
 
 // --- Start server ---
 httpServer.listen(PORT, () => {

@@ -5,16 +5,24 @@ import { Container } from "../components/Container";
 import bgImage from "../assets/bg.jpg";
 import { UsernameModal } from "../components/UsernameModal";
 import socket from "../socket/socket";
+import RoomList from "../components/RoomList";
+import { useRoomsStore } from "../store/rooms";
 
 export const HomePage = () => {
+  const [roomType, setRoomType] = React.useState<"public" | "private">(
+    "public"
+  );
   const [showUsernameModal, setShowUsernameModal] =
     React.useState<boolean>(false);
+  const addPrivateRoomId = useRoomsStore((s) => s.addPrivateRoomId);
 
-  const createRoom = () => {
+  const createRoom = (isPrivate: boolean) => {
     const roomId = nanoid();
+    if (isPrivate) {
+      addPrivateRoomId(roomId);
+    }
     window.open(`/canvas/${roomId}`, "_blank");
-
-    socket.emit("create-room", { roomId });
+    socket.emit("create-room", { roomId, isPrivate });
   };
 
   return (
@@ -55,16 +63,27 @@ export const HomePage = () => {
             others!
           </p>
 
-          <div className="h-10"></div>
+          <div className="p-4">
+            <RoomList />
+          </div>
 
           <div className="flex items-center flex-col gap-8">
             <button
-              onClick={() => setShowUsernameModal(true)}
+              onClick={() => {
+                setRoomType("public");
+                setShowUsernameModal(true);
+              }}
               className="btn-dark py-4 w-[500px] text-light-text rounded-[40px] cursor-pointer"
             >
               Create new room
             </button>
-            <button className="btn-light py-4 w-[500px] text-dark-text rounded-[40px] cursor-pointer">
+            <button
+              onClick={() => {
+                setRoomType("private");
+                setShowUsernameModal(true);
+              }}
+              className="btn-light py-4 w-[500px] text-dark-text rounded-[40px] cursor-pointer"
+            >
               Create private room
             </button>
           </div>
@@ -74,7 +93,7 @@ export const HomePage = () => {
       {showUsernameModal && (
         <UsernameModal
           onHide={() => setShowUsernameModal(false)}
-          createRoom={createRoom}
+          createRoom={() => createRoom(roomType === "private")}
         />
       )}
     </>

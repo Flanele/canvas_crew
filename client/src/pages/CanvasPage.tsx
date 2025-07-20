@@ -8,11 +8,14 @@ import { Canvas } from "../components/Canvas";
 import { ToolBar } from "../components/Toolbar";
 import { CanvasOptionsBar } from "../components/CanvasOptionsBar";
 import Konva from "konva";
+import { useRoomSocketHandler } from "../hooks/useRoomSocketHandler";
 
 export default function CanvasPage() {
   const { id } = useParams<{ id: string }>();
   const stageRef = React.useRef<Konva.Stage | null>(null);
   const username = useUserStore((state) => state.username);
+
+  const { isRoomExist } = useRoomSocketHandler();
 
   if (!id) return <div>Room ID is missing</div>;
 
@@ -43,7 +46,7 @@ export default function CanvasPage() {
 
         {/* Чат справа */}
         <div className="w-[20%] h-[calc(100vh-92px)] overflow-hidden bg-chat-bg border-l-1 border-border">
-          <Chat roomId={id} />
+          <Chat roomId={id} isRoomExist={isRoomExist} />
         </div>
       </div>
     </div>

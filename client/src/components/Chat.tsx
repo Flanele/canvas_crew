@@ -3,12 +3,14 @@ import { useUserStore } from "../store/user";
 import { sendMessage } from "../lib/sendMessage";
 import { useChatMessages } from "../hooks/useChatMessages";
 import { useScrollToBottom } from "../hooks/useScrollToBottom";
+import { Link } from "react-router-dom";
 
 interface Props {
   roomId: string;
+  isRoomExist: boolean;
 }
 
-export const Chat: React.FC<Props> = ({ roomId }) => {
+export const Chat: React.FC<Props> = ({ roomId, isRoomExist }) => {
   const { messages } = useChatMessages();
   const [input, setInput] = React.useState("");
   const username = useUserStore((state) => state.username);
@@ -39,6 +41,19 @@ export const Chat: React.FC<Props> = ({ roomId }) => {
 
   return (
     <div className="h-full flex flex-col p-4">
+      {!isRoomExist && (
+        <div className="mb-4 p-3 rounded-md bg-yellow-100 text-yellow-900 border border-yellow-400 text-sm text-center font-medium">
+          <strong>Warning!</strong> This room does not exist in the list of
+          registered rooms.
+          <br />
+          You can continue drawing, but other users will not see your changes or
+          messages in real time.
+          <br />
+          If you want to create a collaborative room, please go back to the{" "}
+          <Link to="/" className="underline text-green-700">Home page</Link>
+          .
+        </div>
+      )}
       <div
         className="flex-1 overflow-y-auto mb-8 space-y-3 pr-1"
         ref={messagesEndRef}
