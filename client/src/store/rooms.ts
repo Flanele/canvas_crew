@@ -1,28 +1,49 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+interface Room {
+  id: string;
+  name: string;
+  preview: string;
+}
+
 interface RoomStore {
-  privateRoomIds: string[];
-  addPrivateRoomId: (id: string) => void;
-  setPrivateRoomIds: (ids: string[]) => void;
+  publicRooms: Room[];
+  privateRooms: Room[];   
+  myPrivateRoomIds: string[]; 
+  setPublicRooms: (rooms: Room[]) => void;
+  setPrivateRooms: (rooms: Room[]) => void;
+  setMyPrivateRoomIds: (ids: string[]) => void;
+  addMyPrivateRoomId: (id: string) => void;
+  updateRoomPreview: (roomId: string, preview: string) => void;
 }
 
 export const useRoomsStore = create<RoomStore>()(
   persist(
-    (set) => ({
-      privateRoomIds: [],
-      addPrivateRoomId: (id) =>
+    (set, get) => ({
+      publicRooms: [],
+      privateRooms: [],
+      myPrivateRoomIds: [],
+      setPublicRooms: (rooms) => set({ publicRooms: rooms }),
+      setPrivateRooms: (rooms) => set({ privateRooms: rooms }),
+      setMyPrivateRoomIds: (ids) => set({ myPrivateRoomIds: ids }),
+      addMyPrivateRoomId: (id) =>
         set((state) =>
-          state.privateRoomIds.includes(id)
+          state.myPrivateRoomIds.includes(id)
             ? {}
-            : { privateRoomIds: [...state.privateRoomIds, id] }
+            : { myPrivateRoomIds: [...state.myPrivateRoomIds, id] }
         ),
-      setPrivateRoomIds: (ids) => set({ privateRoomIds: ids }),
+      updateRoomPreview: (roomId, preview) =>
+        set((state) => ({
+          publicRooms: state.publicRooms.map((room) =>
+            room.id === roomId ? { ...room, preview } : room
+          ),
+          privateRooms: state.privateRooms.map((room) =>
+            room.id === roomId ? { ...room, preview } : room
+          ),
+        })),
     }),
-    {
-      name: "myPrivateRooms",
-    }
+    { name: "roomsStore" }
   )
 );
-
   

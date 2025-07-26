@@ -14,12 +14,12 @@ export const HomePage = () => {
   );
   const [showUsernameModal, setShowUsernameModal] =
     React.useState<boolean>(false);
-  const addPrivateRoomId = useRoomsStore((s) => s.addPrivateRoomId);
+    const addMyPrivateRoomId = useRoomsStore((s) => s.addMyPrivateRoomId);
 
   const createRoom = (isPrivate: boolean) => {
     const roomId = nanoid();
     if (isPrivate) {
-      addPrivateRoomId(roomId);
+      addMyPrivateRoomId(roomId);
     }
     window.open(`/canvas/${roomId}`, "_blank");
     socket.emit("create-room", { roomId, isPrivate });
@@ -57,13 +57,13 @@ export const HomePage = () => {
       </div>
 
       <Container>
-        <div className="flex items-center flex-col">
+        <div className="flex items-center flex-col pb-20">
           <p className="mt-10">
             Create and collaborate in a fun, shared space with friends and
             others!
           </p>
 
-          <div className="p-4">
+          <div className="p-10">
             <RoomList />
           </div>
 

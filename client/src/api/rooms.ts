@@ -3,6 +3,7 @@ import { axiosInstance } from "./instance/axiosInstance";
 interface Room {
   id: string;
   name: string;
+  preview: string;
 }
 
 export const fetchRooms = async (): Promise<Room[]> => {

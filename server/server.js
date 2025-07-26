@@ -29,7 +29,7 @@ const httpServer = http.createServer(server);
 const io = new Server(httpServer, { cors: corsOptions });
 
 // --- Room storage ---
-/** @type {Map<string, { id: string, name: string, sockets: Set<string>, active: boolean, private: boolean, timeout?: NodeJS.Timeout }>} */
+/** @type {Map<string, { id: string, name: string, sockets: Set<string>, active: boolean, private: boolean, timeout?: NodeJS.Timeout, preview: string }>} */
 const rooms = new Map();
 
 // --- Socket.IO ---
@@ -48,6 +48,7 @@ io.on("connection", (socket) => {
         sockets: new Set(),
         active: true,
         private: isPrivate,
+        preview: "",
       };
       rooms.set(roomId, room);
     }
@@ -372,6 +373,13 @@ io.on("connection", (socket) => {
     state.elements = [];
     state.redoStack = [];
   });
+
+  socket.on("update-room-preview", ({ roomId, preview }) => {
+    const room = rooms.get(roomId);
+    if (room) room.preview = preview;
+
+    io.emit("update-room-preview", { roomId, preview });
+  });
 });
 
 // --- REST API ---
@@ -387,17 +395,16 @@ server.get("/api/rooms", (req, res) => {
 function getVisibleRooms() {
   return Array.from(rooms.values())
     .filter((room) => room.active && !room.private)
-    .map(({ id, name }) => ({ id, name }));
+    .map(({ id, name, preview }) => ({ id, name, preview }));
 }
 
 server.post("/api/rooms/check", (req, res) => {
   const { ids } = req.body;
   const foundRooms = Array.from(rooms.values())
     .filter((room) => ids.includes(room.id))
-    .map(({ id, name }) => ({ id, name }));
+    .map(({ id, name, preview }) => ({ id, name, preview }));
   res.status(200).json(foundRooms);
 });
-
 
 // --- Start server ---
 httpServer.listen(PORT, () => {

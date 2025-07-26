@@ -16,6 +16,7 @@ import {
   useUpdateElement,
 } from "../store/selectors/canvasSelectors";
 import { hitTestEraser } from "../lib/hitTestEraser";
+import { sendPreview } from "../lib/sendPreview";
 
 interface ReturnProps {
   handleMouseDown: () => void;
@@ -116,45 +117,44 @@ export const useCanvasDrawing = ({
   const handleMouseMove = () => {
     if (!isDrawing.current) return;
     if (tool === "Select") return;
-  
+
     const stage = stageRef.current;
     const pos = stage?.getPointerPosition();
     if (!stage || !pos || !drawingIdRef.current) return;
-  
+
     const x = pos.x / scale;
     const y = pos.y / scale;
-  
+
     if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
       eraserLinesRef.current[eraserLinesRef.current.length - 1].push([x, y]);
-  
+
       // Проверяем, какие элементы задеты ластиком
       const elements = useCanvasStore.getState().canvases[roomId] || [];
       const eraserPoints = eraserLinesRef.current.flat(); // все точки текущей линии ластика
-  
+
       elements.forEach((el) => {
         // Не добавляем временные линии и уже отмеченные элементы
-        if (el.type === 'line' && el.isTemp) return;
+        if (el.type === "line" && el.isTemp) return;
         if (targetElementIdsRef.current.includes(el.id)) return;
-  
+
         if (hitTestEraser(eraserPoints, el)) {
           targetElementIdsRef.current.push(el.id);
         }
       });
     }
-  
+
     updateElement(roomId, drawingIdRef.current, [x, y]);
-  
+
     socket.emit("draw-line", {
       roomId,
       id: drawingIdRef.current,
       point: [x, y],
     });
   };
-  
 
   const handleMouseUp = React.useCallback(() => {
     const tempLineId = drawingIdRef.current;
-  
+
     if (tool === "Eraser" && eraserLinesRef.current.length > 0) {
       // Есть ли задетые элементы?
       if (targetElementIdsRef.current.length > 0 && tempLineId) {
@@ -164,14 +164,14 @@ export const useCanvasDrawing = ({
             targetId,
             eraserLinesRef.current,
             eraserStrokeWidthsRef.current,
-            tempLineId 
+            tempLineId
           );
           socket.emit("apply-mask", {
             roomId,
             elementId: targetId,
             eraserLines: eraserLinesRef.current,
             strokeWidths: eraserStrokeWidthsRef.current,
-            tempLineId
+            tempLineId,
           });
         }
       } else if (tempLineId) {
@@ -182,16 +182,17 @@ export const useCanvasDrawing = ({
           id: tempLineId,
         });
       }
-  
+
       eraserLinesRef.current = [];
       targetElementIdsRef.current = [];
     }
-  
+
+    sendPreview(roomId, stageRef);
+
     isDrawing.current = false;
     drawingIdRef.current = null;
   }, [tool, roomId, applyMaskToElement, removeElement]);
-  
-  
+
   return {
     handleMouseDown,
     handleMouseMove,
