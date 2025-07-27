@@ -9,8 +9,11 @@ import { ToolBar } from "../components/Toolbar";
 import { CanvasOptionsBar } from "../components/CanvasOptionsBar";
 import Konva from "konva";
 import { useRoomSocketHandler } from "../hooks/useRoomSocketHandler";
+import { UsernameModal } from "../components/UsernameModal";
 
 export default function CanvasPage() {
+  const [showUsernameModal, setShowUsernameModal] =
+    React.useState<boolean>(false);
   const { id } = useParams<{ id: string }>();
   const stageRef = React.useRef<Konva.Stage | null>(null);
   const username = useUserStore((state) => state.username);
@@ -27,6 +30,10 @@ export default function CanvasPage() {
       });
     }
   }, [socket, id]);
+
+  React.useEffect(() => {
+    setShowUsernameModal(true);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -49,6 +56,12 @@ export default function CanvasPage() {
           <Chat roomId={id} isRoomExist={isRoomExist} />
         </div>
       </div>
+
+      {showUsernameModal && (
+        <UsernameModal
+          onHide={() => setShowUsernameModal(false)}
+        />
+      )}
     </div>
   );
 }

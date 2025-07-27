@@ -4,10 +4,9 @@ import { X } from "lucide-react";
 
 interface Props {
   onHide: () => void;
-  createRoom: () => void;
 }
 
-export const UsernameModal: React.FC<Props> = ({ onHide, createRoom }) => {
+export const UsernameModal: React.FC<Props> = ({ onHide }) => {
   const { username, setUsername } = useUserStore();
   const [inputValue, setInputValue] = React.useState<string>(username);
   const [accessError, setAccessError] = React.useState<boolean>(false);
@@ -16,7 +15,6 @@ export const UsernameModal: React.FC<Props> = ({ onHide, createRoom }) => {
     if (inputValue) {
       setUsername(inputValue);
       onHide();
-      createRoom();
     }
 
     setAccessError(true);

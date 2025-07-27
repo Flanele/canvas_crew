@@ -1,20 +1,13 @@
-import React from "react";
 import { nanoid } from "nanoid";
 import { Container } from "../components/Container";
 
 import bgImage from "../assets/bg.jpg";
-import { UsernameModal } from "../components/UsernameModal";
 import socket from "../socket/socket";
 import RoomList from "../components/RoomList";
 import { useRoomsStore } from "../store/rooms";
 
 export const HomePage = () => {
-  const [roomType, setRoomType] = React.useState<"public" | "private">(
-    "public"
-  );
-  const [showUsernameModal, setShowUsernameModal] =
-    React.useState<boolean>(false);
-    const addMyPrivateRoomId = useRoomsStore((s) => s.addMyPrivateRoomId);
+  const addMyPrivateRoomId = useRoomsStore((s) => s.addMyPrivateRoomId);
 
   const createRoom = (isPrivate: boolean) => {
     const roomId = nanoid();
@@ -70,8 +63,7 @@ export const HomePage = () => {
           <div className="flex items-center flex-col gap-8">
             <button
               onClick={() => {
-                setRoomType("public");
-                setShowUsernameModal(true);
+                createRoom(false);
               }}
               className="btn-dark py-4 w-[500px] text-light-text rounded-[40px] cursor-pointer"
             >
@@ -79,8 +71,7 @@ export const HomePage = () => {
             </button>
             <button
               onClick={() => {
-                setRoomType("private");
-                setShowUsernameModal(true);
+                createRoom(true);
               }}
               className="btn-light py-4 w-[500px] text-dark-text rounded-[40px] cursor-pointer"
             >
@@ -89,13 +80,6 @@ export const HomePage = () => {
           </div>
         </div>
       </Container>
-
-      {showUsernameModal && (
-        <UsernameModal
-          onHide={() => setShowUsernameModal(false)}
-          createRoom={() => createRoom(roomType === "private")}
-        />
-      )}
     </>
   );
 };
