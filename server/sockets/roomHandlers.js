@@ -1,3 +1,4 @@
+const { addMessageToHistory } = require("../lib/addMessageToHistory");
 const { rooms, getVisibleRooms } = require("../models/rooms");
 const canvasState = require("../state/canvasState");
 const { nanoid } = require("nanoid");
@@ -32,6 +33,9 @@ module.exports = (io, socket) => {
   });
 
   socket.on("join-room", ({ roomId, username }) => {
+    socket.data.username = username;
+    socket.data.roomId = roomId;
+    
     const room = rooms.get(roomId);
 
     if (!room) {
@@ -59,6 +63,8 @@ module.exports = (io, socket) => {
         time: Date.now(),
         type: "system",
       };
+
+      addMessageToHistory(roomId, systemMessage);
 
       io.to(roomId).emit("message", systemMessage);
 

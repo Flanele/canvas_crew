@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { addMessageToHistory } = require("../lib/addMessageToHistory");
 
 module.exports = (io, socket) => {
   socket.on("message", ({ roomId, id, text, username, time, type }) => {
@@ -9,10 +10,17 @@ module.exports = (io, socket) => {
 
     const message = { id, text, username, time, type };
 
+    addMessageToHistory(roomId, message);
+    io.to(roomId).emit("message", { id, text, username, time, type });
+  });
+
+  socket.on("load-messages", ({ roomId }) => {
+    if (!roomId) {
+      return;
+    }
+
     const chatDir = path.join(__dirname, "..", "temp", "chats");
     const filePath = path.join(chatDir, `${roomId}.json`);
-
-    fs.mkdirSync(chatDir, { recursive: true });
 
     let history = [];
 
@@ -20,21 +28,11 @@ module.exports = (io, socket) => {
       try {
         const raw = fs.readFileSync(filePath, "utf-8");
         history = JSON.parse(raw);
-      } catch (err) {
+      } catch (error) {
         console.error("❌ Error reading chat file:", err);
       }
     }
 
-    history.push(message);
-
-    try {
-      fs.writeFileSync(filePath, JSON.stringify(history, null, 2), "utf-8");
-      console.log(`💾 Saved message to ${filePath}`);
-    } catch (err) {
-      console.error("❌ Error saving chat:", err);
-    }
-
-    console.log(`✉️  User ${username} sent '${text}' in room ${roomId}`);
-    io.to(roomId).emit("message", { id, text, username, time, type });
+    io.to(roomId).emit("load-messages", { roomId, history });
   });
 };

@@ -24,6 +24,7 @@ export default function CanvasPage() {
 
   React.useEffect(() => {
     if (socket && id) {
+      console.log("JOIN ROOM EMIT!");
       socket.emit("join-room", {
         roomId: id,
         username: username || "Anonymous",

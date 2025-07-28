@@ -4,6 +4,7 @@ import { sendMessage } from "../lib/sendMessage";
 import { useChatMessages } from "../hooks/useChatMessages";
 import { useScrollToBottom } from "../hooks/useScrollToBottom";
 import { Link } from "react-router-dom";
+import socket from "../socket/socket";
 
 interface Props {
   roomId: string;
@@ -11,13 +12,19 @@ interface Props {
 }
 
 export const Chat: React.FC<Props> = ({ roomId, isRoomExist }) => {
-  const { messages } = useChatMessages();
+  const { messages } = useChatMessages(roomId);
   const [input, setInput] = React.useState("");
   const username = useUserStore((state) => state.username);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   useScrollToBottom(messagesEndRef, [messages]);
+
+  React.useEffect(() => {
+    if (socket && isRoomExist && roomId) {
+      socket.emit("load-messages", { roomId });
+    }
+  }, [roomId, isRoomExist]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (e.target.value.length <= 1000) {
