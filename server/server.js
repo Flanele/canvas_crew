@@ -14,9 +14,17 @@ const server = express();
 clearChatHistory();
 
 // --- CORS ---
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 const corsOptions = {
-  origin: "http://localhost:5173",
-  methods: ["GET", "POST", "DELETE"],
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // для Postman/curl
+    cb(null, allowedOrigins.includes(origin));
+  },
+  methods: ["GET", "POST", "DELETE", "OPTIONS"],
 };
 server.use(cors(corsOptions));
 server.use(express.json());
@@ -45,6 +53,6 @@ server.post("/api/rooms/check", (req, res) => {
 });
 
 // --- Start server ---
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server started at http://localhost:${PORT}`);
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server started on :${PORT}`);
 });
