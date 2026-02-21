@@ -20,7 +20,7 @@ interface RoomStore {
 
 export const useRoomsStore = create<RoomStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       publicRooms: [],
       privateRooms: [],
       myPrivateRoomIds: [],
